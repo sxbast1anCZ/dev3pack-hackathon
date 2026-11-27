@@ -34,6 +34,8 @@ check_pattern "Solana keypair (array of 64 bytes)" '\[([[:space:]]*[0-9]{1,3}[[:
 check_pattern "JWT (Supabase key?)" 'eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}'
 check_pattern "Firecrawl API key" 'fc-[a-f0-9]{32}'
 check_pattern "API key with sk_ prefix" 'sk_[a-zA-Z0-9]{32,}'
+check_pattern "Supabase secret key" 'sb_secret_[A-Za-z0-9_-]{20,}'
+check_pattern "LLM API key" 'sk-(ant|proj)-[A-Za-z0-9_-]{20,}'
 
 if [ "$fail" -ne 0 ]; then
   echo "Remove the secret, and rotate the key if it was ever pushed."
