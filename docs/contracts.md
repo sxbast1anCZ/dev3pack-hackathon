@@ -30,7 +30,7 @@ after the first deploy. The CLI and the TypeScript client use the same Anchor ve
 
 - Amounts are whole Chilean pesos, as `u64`.
 - Payment is in devnet SOL: `LAMPORTS_PER_PESO = 1_000`. A purchase of 2,599 pesos moves
-  2,599,000 lamports. (Proposed; Ruben confirms. See `docs/decisions.md`.)
+  2,599,000 lamports.
 
 ### Limits
 
