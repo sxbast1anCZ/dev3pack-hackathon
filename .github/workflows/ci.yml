@@ -90,4 +90,14 @@ jobs:
       - name: Build and test
         run: yarn test:local
 
-# Build and test jobs per lane (agent, web, data) are added when each lane is scaffolded.
+  data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check the price parsers and rules
+        run: node data/refresh-prices.mjs --self-test
+
+# Build and test jobs for the other lanes (agent, web) are added when each is scaffolded.

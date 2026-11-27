@@ -43,7 +43,8 @@ Filled in only when the integration runs. Each row names the file where it lives
 
 | Integration | What it does in the product | File |
 | --- | --- | --- |
-| | | |
+| Firecrawl | Reads the current price and stock of each catalog medicine on three pharmacy sites (Cruz Verde, Ahumada, Salcobrand) | `data/refresh-prices.mjs` |
+| Supabase | Stores the catalog and the latest reading of each price. The browser key can read them and cannot write | `data/refresh-prices.mjs` |
 
 ## What this project does not do
 

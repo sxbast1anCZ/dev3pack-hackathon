@@ -1,0 +1,19 @@
+{
+  "products": [
+    {
+      "id": "losartan-50mg-30",
+      "name": "Losartán 50 mg, 30 comprimidos",
+      "active_ingredient": "losartan",
+      "dose": "50 mg",
+      "quantity": 30,
+      "requires_prescription": true,
+      "is_bioequivalent": true,
+      "aliases": ["losartán", "losartan", "losartán de 50", "losartan de 50", "losartán potásico"],
+      "sources": {
+        "cruzverde": "https://www.cruzverde.cl/losartan-potasico-50-mg-30-comprimidos/268539.html",
+        "ahumada": "https://www.farmaciasahumada.cl/losartan-potasico-50-mg-x-30-comprimidos-recubiertos-92800.html",
+        "salcobrand": "https://salcobrand.cl/products/losartan-b-50mg-30-comprimidos-recubiertos?default_sku=436798"
+      }
+    }
+  ]
+}
