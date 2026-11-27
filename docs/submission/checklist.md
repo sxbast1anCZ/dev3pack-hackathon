@@ -5,12 +5,12 @@ dashboard and can be edited until then. Requirements: `../hackathon-requirements
 
 ## Milestones (Chile time)
 
-The times are a proposal by the agent; Sebastián adjusts them.
-
 | When | What must be true |
 | --- | --- |
-| Fri 27, end of day | Product design approved. Contracts and task cards written. Every developer has a devnet wallet with test SOL |
-| Sat 28, 10:00 | A thin version of the main flow works end to end: the program is on devnet and the web app is live. Shown in the feedback session |
+| Fri 27, 21:00 | Design, contracts and task cards merged into `dev`. Every developer has a devnet wallet with test SOL |
+| Fri 27, 24:00 | The four validations of `../agent-handoff.md` pass: the vault pays on devnet, voice calls our tool, Firecrawl reads the three chains, the app is published |
+| Sat 28, 10:00 | A thin flow works end to end, shown in the feedback session: voice, proposal, spoken yes, payment on devnet, visible on the web |
+| Sat 28, 14:00 | Rejections, pause, guest mode and the read-only policy view |
 | Sat 28, 16:00 | **Minimal submission saved in the form:** program address, public repository, a first video. From here on we only improve |
 | Sat 28, 22:00 | Feature freeze. Only fixes, README and video after this |
 | Sun 29, 00:00 | Final video recorded and uploaded |
@@ -50,6 +50,8 @@ The times are a proposal by the agent; Sebastián adjusts them.
 - [ ] Published; the link opens in a private window.
 - [ ] A person who never saw the app completes the main flow without help and without real funds.
 - [ ] It is an app where the user does something, not a landing page.
+- [ ] Guest mode works on a clean browser: the guest policy has funds and its period has room.
+- [ ] A request outside the policy is refused by the program, and the agent says why.
 
 ### Video
 
@@ -64,10 +66,3 @@ The times are a proposal by the agent; Sebastián adjusts them.
 - [ ] Program address, repository link, live demo link, video link.
 - [ ] Each partner track marked has its explanation and its file.
 - [ ] Team members confirmed.
-
-### If we go for Solana Mobile
-
-- [ ] Native app started from the official template. Not a wrapped web app.
-- [ ] Installable APK attached or linked.
-- [ ] Connect and sign work through Mobile Wallet Adapter on a clean install.
-- [ ] A demo video of the wallet flow on a device or emulator.
