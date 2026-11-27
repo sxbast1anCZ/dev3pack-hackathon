@@ -163,3 +163,9 @@ for families. Our own SPL token is the first improvement if time is left.
 - The demo and the video include a rejection by the program.
 - The agent gives no medical advice, suggests no dose, swaps no medicine and proposes nothing out
   of stock.
+
+## 2026-11-27. Payment unit confirmed: devnet SOL, 1 peso = 1,000 lamports
+
+**State:** Agreed. **Who:** Ruben. Confirms "Payments settle in devnet SOL at a fixed rate".
+
+The program pays in devnet SOL with `LAMPORTS_PER_PESO = 1_000`. No SPL token in the first flow.
