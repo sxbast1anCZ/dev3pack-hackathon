@@ -22,7 +22,7 @@ To be written when the first flow runs: the steps, and a diagram.
 
 | Network | Program | Address |
 | --- | --- | --- |
-| Devnet | `remedio_seguro` | Not deployed yet |
+| Devnet | `remedio_seguro` | [`Axg5mp8n16EGYXEmXVZD4XM3YT2jjsypH2Ep5tJKwaEF`](https://explorer.solana.com/address/Axg5mp8n16EGYXEmXVZD4XM3YT2jjsypH2Ep5tJKwaEF?cluster=devnet) |
 
 ## Try it
 
