@@ -1,3 +1,5 @@
+import { MemoryQuoteStore, setQuoteStore } from '../_lib/quotes.js'
+
 export const TEST_SECRET = 'test-secret-value'
 
 // Builds the request ElevenLabs sends to a webhook tool.
@@ -18,4 +20,11 @@ export function withSecret<T>(fn: () => Promise<T>): Promise<T> {
     if (before === undefined) delete process.env.AGENT_TOOL_SECRET
     else process.env.AGENT_TOOL_SECRET = before
   })
+}
+
+// Each test gets a fresh in-memory quote store instead of Supabase.
+export function withMemoryQuotes(): MemoryQuoteStore {
+  const store = new MemoryQuoteStore()
+  setQuoteStore(store)
+  return store
 }

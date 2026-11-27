@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
+import { beforeEach, test } from 'node:test'
 import type { ConfirmPurchaseResponse, ProposePurchaseResponse } from '../_lib/contract.js'
 import { POST as confirm } from '../tools/confirm-purchase.js'
 import { POST as propose } from '../tools/propose-purchase.js'
-import { toolRequest, withSecret } from './helpers.js'
+import { toolRequest, withMemoryQuotes, withSecret } from './helpers.js'
 
 const policy = 'PolicyAddress111'
+
+beforeEach(() => {
+  withMemoryQuotes()
+})
 
 test('propose returns a quote for a product in stock', () =>
   withSecret(async () => {
@@ -38,12 +42,18 @@ test('propose rejects an unknown pharmacy as a malformed body', () =>
     assert.equal(res.status, 400)
   }))
 
-test('confirm answers the simulated result and says no transaction was sent', () =>
+test('confirm of a fresh quote answers the simulated result and says no transaction was sent', () =>
   withSecret(async () => {
-    const res = await confirm(toolRequest({ quote_id: '7c9e6679-7425-40de-944b-e07fc1f90ae7' }))
+    const quote = (await (
+      await propose(toolRequest({ policy, product_id: 'losartan-50mg-30', pharmacy: 'cruzverde' }))
+    ).json()) as ProposePurchaseResponse
+    assert.ok(quote.ok)
+    const res = await confirm(toolRequest({ quote_id: quote.quote_id }))
     const out = (await res.json()) as ConfirmPurchaseResponse
     assert.ok(out.ok)
     assert.equal(out.signature, 'simulated-no-transaction')
+    assert.equal(out.price, 2690)
+    assert.equal(out.pharmacy, 'cruzverde')
   }))
 
 test('confirm refuses a quote id that is not a uuid', () =>
