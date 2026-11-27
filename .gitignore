@@ -1,0 +1,41 @@
+# Secrets. The repository is public.
+.env
+.env.*
+!.env.example
+*keypair*.json
+id.json
+*.pem
+
+# Node
+node_modules/
+dist/
+build/
+.next/
+.turbo/
+.vercel/
+*.tsbuildinfo
+npm-debug.log*
+
+# Rust and Anchor
+target/
+.anchor/
+test-ledger/
+
+# Expo and Android (stretch goal)
+.expo/
+*.apk
+*.aab
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/
+
+# Editors and OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Local agent settings
+.claude/settings.local.json
