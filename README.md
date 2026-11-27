@@ -26,11 +26,27 @@ To be written when the first flow runs: the steps, and a diagram.
 
 ## Try it
 
-Live demo: not published yet.
+Live demo: not published yet. The app and its functions deploy to Vercel from `dev` (`vercel.json`).
 
 ## Run it locally
 
-To be written when the project is scaffolded.
+Needs Node.js 22 or later.
+
+```
+npm install
+npm run dev        # the web app, at http://localhost:5173
+npm test           # tests of the functions in api/
+npm run typecheck
+npm run build      # the app, into app/dist
+```
+
+`npm run dev` serves only the app. To run the app and the functions in `api/` together, use the
+Vercel CLI: `npx vercel dev`.
+
+| Directory | What it holds |
+| --- | --- |
+| `app/` | The web app: Vite, React and TypeScript |
+| `api/` | Vercel functions. Files and folders whose name starts with `_` are not published as functions |
 
 ## What Solana does here
 
