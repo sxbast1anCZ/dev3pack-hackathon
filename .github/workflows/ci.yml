@@ -32,4 +32,14 @@ jobs:
       - name: Check for secrets
         run: bash scripts/check-secrets.sh
 
-# Build and test jobs per lane (program, agent, web, data) are added when each lane is scaffolded.
+  data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check the price parsers and rules
+        run: node data/refresh-prices.mjs --self-test
+
+# Build and test jobs for the other lanes (program, agent, web) are added when each is scaffolded.

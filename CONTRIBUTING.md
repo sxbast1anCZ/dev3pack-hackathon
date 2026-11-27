@@ -43,7 +43,7 @@ its tests, and try the main flow by hand.
 | `program` | To be added with the scaffold |
 | `agent` | To be added with the scaffold |
 | `web` | To be added with the scaffold |
-| `data` | To be added with the scaffold |
+| `data` | `node data/refresh-prices.mjs --self-test`. To read real prices: `node --env-file=.env data/refresh-prices.mjs` |
 
 ## Shared files
 
