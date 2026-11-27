@@ -1,6 +1,9 @@
 {
   "license": "ISC",
   "scripts": {
+    "build": "anchor build --arch v0",
+    "test:local": "anchor build --arch v0 && anchor test --skip-build --provider.cluster localnet --validator legacy",
+    "deploy:devnet": "anchor build --arch v0 && anchor deploy --provider.cluster devnet",
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"
   },

@@ -317,8 +317,8 @@ describe("remedio_seguro rejections", () => {
   });
 
   // Needs a validator whose clock follows real time: run the suite with
-  // `anchor test --validator legacy`. Surfpool, the default, runs its clock
-  // ahead, so a short period ends before the second purchase.
+  // `yarn test:local` (legacy validator, SBPF v0 build). Surfpool, the default,
+  // runs its clock ahead, so a short period ends before the second purchase.
   it("resets the period budget once the period ends", async () => {
     const policy = await newPolicy({ budget: 1_000, cap: 1_000, period: 5 });
     await pay(policy, 1_000);
