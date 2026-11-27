@@ -73,13 +73,17 @@ export function rejectReason(reading, product, lastPrice) {
   const { product_name, price, in_stock } = reading
   if (!Number.isInteger(price) || price < MIN_PRICE || price > MAX_PRICE) return `price out of range: ${price}`
   if (typeof in_stock !== 'boolean') return 'stock is not a boolean'
-  if (typeof product_name !== 'string' || !fold(product_name).includes(fold(product.active_ingredient))) {
+  // A page names a product by its active ingredient or, for a brand, by the brand alone.
+  const names = [product.active_ingredient, product.brand].filter(Boolean).map(fold)
+  if (typeof product_name !== 'string' || !names.some((n) => fold(product_name).includes(n))) {
     return `page is about another product: "${product_name}"`
   }
+  // ponytail: the dose and the pack size are checked as bare numbers in the title. A title that
+  // swaps them (dose 30, pack 50 for a 50 mg x 30 product) would pass; parse units if that shows up.
+  const hasNumber = (n) => new RegExp(`(^|\\D)${n}(\\D|$)`).test(product_name)
   const doseNumber = product.dose.match(/\d+/)?.[0]
-  if (doseNumber && !new RegExp(`(^|\\D)${doseNumber}(\\D|$)`).test(product_name)) {
-    return `page is about another dose: "${product_name}"`
-  }
+  if (doseNumber && !hasNumber(doseNumber)) return `page is about another dose: "${product_name}"`
+  if (product.quantity && !hasNumber(product.quantity)) return `page is about another pack size: "${product_name}"`
   if (lastPrice && Math.abs(price - lastPrice) / lastPrice > MAX_JUMP) {
     return `price moved from ${lastPrice} to ${price}: more than ${MAX_JUMP * 100}%`
   }
@@ -106,8 +110,12 @@ function selfTest() {
   // A page with no price at all yields no price, and the rules below reject it.
   assert.equal(PARSERS.ahumada('# Losartan 50 mg\nno price here').price, undefined)
 
-  const product = { active_ingredient: 'losartan', dose: '50 mg' }
+  const product = { active_ingredient: 'losartan', dose: '50 mg', quantity: 30 }
   const ok = { product_name: 'Losartán Potásico 50 mg 30 Comprimidos', price: 1890, in_stock: true }
+  assert.match(rejectReason({ ...ok, product_name: 'Losartan 50 mg 60 Comprimidos' }, product, null), /another pack size/)
+  const brand = { brand: 'corodin', active_ingredient: 'losartan', dose: '50 mg', quantity: 30 }
+  assert.equal(rejectReason({ ...ok, product_name: 'Corodin 50 mg x 30 Comprimidos Recubiertos' }, brand, null), null)
+  assert.match(rejectReason({ ...ok, product_name: 'Cozaar 50 mg x 30 Comprimidos' }, brand, null), /another product/)
   assert.equal(rejectReason(ok, product, null), null)
   assert.equal(rejectReason(ok, product, 2000), null)
   assert.match(rejectReason(null, product, null), /empty/)
@@ -142,6 +150,14 @@ async function supabase(path, { method = 'GET', body, prefer } = {}) {
   if (!res.ok) throw new Error(`Supabase ${method} ${path}: ${res.status} ${await res.text()}`)
   const text = await res.text()
   return text ? JSON.parse(text) : null
+}
+
+// ponytail: fixed batches, not a sliding pool. Firecrawl's free plan allows few concurrent reads.
+const CONCURRENCY = 3
+async function inBatches(items, size, fn) {
+  const out = []
+  for (let i = 0; i < items.length; i += size) out.push(...(await Promise.all(items.slice(i, i + size).map(fn))))
+  return out
 }
 
 const upsert = (table, conflict, rows) =>
@@ -180,7 +196,8 @@ async function main() {
   }
 
   // The catalog file is the source of truth: load it before reading prices.
-  await upsert('products', 'id', products.map(({ sources, ...row }) => row))
+  // `sources` and `brand` live only in the catalog file; the table has no such columns.
+  await upsert('products', 'id', products.map(({ sources, brand, ...row }) => row))
   await upsert(
     'product_sources',
     'product_id,pharmacy',
@@ -191,13 +208,17 @@ async function main() {
   const lastPrice = (id, pharmacy) => stored.find((r) => r.product_id === id && r.pharmacy === pharmacy)?.price ?? null
 
   const jobs = products.flatMap((p) => Object.entries(p.sources).map(([pharmacy, url]) => ({ product: p, pharmacy, url })))
-  const results = await Promise.all(
-    jobs.map(async ({ product, pharmacy, url }) => {
+  const results = await inBatches(jobs, CONCURRENCY, async ({ product, pharmacy, url }) => {
       const started = Date.now()
       const seconds = () => ((Date.now() - started) / 1000).toFixed(1)
       try {
-        const { reading, credits } = await readPage(url, pharmacy)
-        const reason = rejectReason(reading, product, lastPrice(product.id, pharmacy))
+        // A page sometimes comes back half rendered. One second try, then give up and report.
+        let { reading, credits } = await readPage(url, pharmacy)
+        let reason = rejectReason(reading, product, lastPrice(product.id, pharmacy))
+        if (reason) {
+          ;({ reading, credits } = await readPage(url, pharmacy))
+          reason = rejectReason(reading, product, lastPrice(product.id, pharmacy))
+        }
         if (reason) return { product: product.id, pharmacy, ok: false, reason, seconds: seconds(), credits }
         await upsert('prices', 'product_id,pharmacy', [
           { product_id: product.id, pharmacy, price: reading.price, in_stock: reading.in_stock, read_at: new Date().toISOString() },
@@ -206,11 +227,11 @@ async function main() {
       } catch (error) {
         return { product: product.id, pharmacy, ok: false, reason: error.message, seconds: seconds() }
       }
-    }),
-  )
+  })
 
-  console.table(results)
+  console.table(results.map(({ reason, name, ...row }) => row))
   const failed = results.filter((r) => !r.ok)
+  for (const f of failed) console.error(`REJECTED ${f.product} at ${f.pharmacy}: ${f.reason}`)
   if (failed.length) {
     console.error(`ALERT: ${failed.length} of ${results.length} readings were rejected and not stored.`)
     process.exitCode = 1

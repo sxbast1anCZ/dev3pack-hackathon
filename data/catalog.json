@@ -14,6 +14,141 @@
         "ahumada": "https://www.farmaciasahumada.cl/losartan-potasico-50-mg-x-30-comprimidos-recubiertos-92800.html",
         "salcobrand": "https://salcobrand.cl/products/losartan-b-50mg-30-comprimidos-recubiertos?default_sku=436798"
       }
+    },
+    {
+      "id": "corodin-50mg-30",
+      "name": "Corodin 50 mg, 30 comprimidos",
+      "brand": "corodin",
+      "active_ingredient": "losartan",
+      "dose": "50 mg",
+      "quantity": 30,
+      "requires_prescription": true,
+      "is_bioequivalent": true,
+      "aliases": ["corodin", "corodín", "corodin de 50"],
+      "sources": {
+        "cruzverde": "https://www.cruzverde.cl/corodin-losartan-potasico-50-mg-30-comprimidos/4540.html",
+        "ahumada": "https://www.farmaciasahumada.cl/corodin-50-mg-x-30-comprimidos-recubiertos-28998.html",
+        "salcobrand": "https://salcobrand.cl/products/corodin-b-losartan-potasico-50mg-30-comprimidos-recubiertos?default_sku=2831619"
+      }
+    },
+    {
+      "id": "metformina-850mg-60",
+      "name": "Metformina 850 mg, 60 comprimidos",
+      "active_ingredient": "metformina",
+      "dose": "850 mg",
+      "quantity": 60,
+      "requires_prescription": true,
+      "is_bioequivalent": true,
+      "aliases": ["metformina", "metformina de 850", "la metformina"],
+      "sources": {
+        "cruzverde": "https://www.cruzverde.cl/metformina-850-mg-60-comprimidos/270505.html",
+        "ahumada": "https://www.farmaciasahumada.cl/metformina-clorhidrato-850-mg-x-60-comprimidos-96812.html",
+        "salcobrand": "https://salcobrand.cl/products/metformina-clorhidrato-b-850mg-60-comprimidos-recubiertos?default_sku=573614"
+      }
+    },
+    {
+      "id": "atorvastatina-10mg-30",
+      "name": "Atorvastatina 10 mg, 30 comprimidos",
+      "active_ingredient": "atorvastatina",
+      "dose": "10 mg",
+      "quantity": 30,
+      "requires_prescription": true,
+      "is_bioequivalent": true,
+      "aliases": ["atorvastatina", "atorvastatina de 10", "la atorvastatina"],
+      "sources": {
+        "cruzverde": "https://www.cruzverde.cl/atorvastatina-10-mg-30-comprimidos/270459.html",
+        "ahumada": "https://www.farmaciasahumada.cl/atorvastatina-10-mg-caja-30-comp.-recubiertos-chile-84373.html",
+        "salcobrand": "https://salcobrand.cl/products/atorvastatina-10mg-oral-solido-6129d702-cbc4-41b6-bf31-be9c34b3a82b?default_sku=430154"
+      }
+    },
+    {
+      "id": "enalapril-10mg-20",
+      "name": "Enalapril 10 mg, 20 comprimidos",
+      "active_ingredient": "enalapril",
+      "dose": "10 mg",
+      "quantity": 20,
+      "requires_prescription": true,
+      "is_bioequivalent": true,
+      "aliases": ["enalapril", "enalapril de 10", "el enalapril"],
+      "sources": {
+        "cruzverde": "https://www.cruzverde.cl/enalapril-10-mg-20-comprimidos/199254.html",
+        "ahumada": "https://www.farmaciasahumada.cl/enalapril-10-mg-x-20-comprimidos-opko-chile-s.a.-89510.html",
+        "salcobrand": "https://salcobrand.cl/products/enalapril-b-10mg-20-comprimidos-recubiertos?default_sku=586511"
+      }
+    },
+    {
+      "id": "amlodipino-5mg-30",
+      "name": "Amlodipino 5 mg, 30 comprimidos",
+      "active_ingredient": "amlodipino",
+      "dose": "5 mg",
+      "quantity": 30,
+      "requires_prescription": true,
+      "is_bioequivalent": true,
+      "aliases": ["amlodipino", "amlodipino de 5", "el amlodipino"],
+      "sources": {
+        "cruzverde": "https://www.cruzverde.cl/amlodipino-5-mg-30-comprimidos/288078.html",
+        "salcobrand": "https://salcobrand.cl/products/amlodipino-b-5mg-30-comprimidos?default_sku=1763105"
+      }
+    },
+    {
+      "id": "omeprazol-20mg-30",
+      "name": "Omeprazol 20 mg, 30 cápsulas",
+      "active_ingredient": "omeprazol",
+      "dose": "20 mg",
+      "quantity": 30,
+      "requires_prescription": true,
+      "is_bioequivalent": true,
+      "aliases": ["omeprazol", "omeprazol de 20", "el omeprazol"],
+      "sources": {
+        "cruzverde": "https://www.cruzverde.cl/omeprazol-20-mg-30-capsulas-con-granulos/275886.html",
+        "salcobrand": "https://salcobrand.cl/products/omeprazol-b-20mg-30-capsulas?default_sku=430270"
+      }
+    },
+    {
+      "id": "eutirox-100mcg-50",
+      "name": "Eutirox 100 microgramos, 50 comprimidos",
+      "brand": "eutirox",
+      "active_ingredient": "levotiroxina",
+      "dose": "100 mcg",
+      "quantity": 50,
+      "requires_prescription": true,
+      "is_bioequivalent": false,
+      "aliases": ["eutirox", "eutirox de 100", "levotiroxina", "la pastilla de la tiroides"],
+      "sources": {
+        "cruzverde": "https://www.cruzverde.cl/eutirox-100-levotiroxina-100-mcg-50-comprimidos/253753.html",
+        "ahumada": "https://www.farmaciasahumada.cl/eutirox-100-mcg-x-50-comprimidos-48308.html",
+        "salcobrand": "https://salcobrand.cl/products/eutirox-r-levotiroxina-100mcg-50-comprimidos?default_sku=2013213"
+      }
+    },
+    {
+      "id": "paracetamol-500mg-16",
+      "name": "Paracetamol 500 mg, 16 comprimidos",
+      "active_ingredient": "paracetamol",
+      "dose": "500 mg",
+      "quantity": 16,
+      "requires_prescription": false,
+      "is_bioequivalent": true,
+      "aliases": ["paracetamol", "paracetamol de 500", "el paracetamol"],
+      "sources": {
+        "cruzverde": "https://www.cruzverde.cl/paracetamol-500-mg-16-comprimidos/272241.html",
+        "ahumada": "https://www.farmaciasahumada.cl/paracetamol-500-mg-x-16-comprimidos-84574.html",
+        "salcobrand": "https://salcobrand.cl/products/paracetamol-b-500-mg-16-comprimidos?default_sku=432432"
+      }
+    },
+    {
+      "id": "acido-acetilsalicilico-100mg-100",
+      "name": "Ácido acetilsalicílico 100 mg, 100 comprimidos",
+      "active_ingredient": "acido acetilsalicilico",
+      "dose": "100 mg",
+      "quantity": 100,
+      "requires_prescription": false,
+      "is_bioequivalent": true,
+      "aliases": ["aspirina de 100", "ácido acetilsalicílico", "aspirina para el corazón", "aspirinita"],
+      "sources": {
+        "cruzverde": "https://www.cruzverde.cl/acido-acetilsalicilico-100-mg-100-comprimidos/264669.html",
+        "ahumada": "https://www.farmaciasahumada.cl/acido-acetilsalicilico-100-mg-x-100-comprimidos-91488.html",
+        "salcobrand": "https://salcobrand.cl/products/acido-acetilsalicilico-b-100mg-100-comprimidos?default_sku=583152"
+      }
     }
   ]
 }
