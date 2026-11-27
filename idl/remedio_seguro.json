@@ -60,6 +60,34 @@
       ]
     },
     {
+      "name": "close_policy",
+      "discriminator": [
+        55,
+        42,
+        248,
+        229,
+        222,
+        138,
+        26,
+        252
+      ],
+      "accounts": [
+        {
+          "name": "family",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "policy"
+          ]
+        },
+        {
+          "name": "policy",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "create_policy",
       "discriminator": [
         27,
@@ -150,6 +178,38 @@
         {
           "name": "deposit_pesos",
           "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "set_paused",
+      "discriminator": [
+        91,
+        60,
+        125,
+        192,
+        176,
+        225,
+        166,
+        218
+      ],
+      "accounts": [
+        {
+          "name": "family",
+          "signer": true,
+          "relations": [
+            "policy"
+          ]
+        },
+        {
+          "name": "policy",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "paused",
+          "type": "bool"
         }
       ]
     }
