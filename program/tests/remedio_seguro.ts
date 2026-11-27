@@ -83,4 +83,87 @@ describe("remedio_seguro", () => {
       );
     }
   });
+
+  const expectAnchorError = async (p: Promise<unknown>, code: string) => {
+    try {
+      await p;
+      expect.fail(`expected ${code}`);
+    } catch (err) {
+      expect(err).to.be.instanceOf(anchor.AnchorError);
+      expect((err as anchor.AnchorError).error.errorCode.code).to.equal(code);
+    }
+  };
+
+  it("lets only the family pause", async () => {
+    const stranger = Keypair.generate();
+    await expectAnchorError(
+      program.methods
+        .setPaused(true)
+        .accountsPartial({ family: stranger.publicKey, policy })
+        .signers([stranger])
+        .rpc(),
+      "ConstraintHasOne"
+    );
+    const state = await program.account.policy.fetch(policy);
+    expect(state.paused).to.equal(false);
+  });
+
+  it("refuses payment with Paused while paused, and pays after resuming", async () => {
+    await program.methods
+      .setPaused(true)
+      .accountsPartial({ family, policy })
+      .rpc();
+    await expectAnchorError(
+      program.methods
+        .agentPay(new BN(1_000), product, sha256("quote-3"))
+        .accountsPartial({ agent: agent.publicKey, policy, pharmacy })
+        .signers([agent])
+        .rpc(),
+      "Paused"
+    );
+
+    await program.methods
+      .setPaused(false)
+      .accountsPartial({ family, policy })
+      .rpc();
+    await program.methods
+      .agentPay(new BN(1_000), product, sha256("quote-4"))
+      .accountsPartial({ agent: agent.publicKey, policy, pharmacy })
+      .signers([agent])
+      .rpc();
+    const state = await program.account.policy.fetch(policy);
+    expect(state.spentInPeriod.toNumber()).to.equal(3_599);
+  });
+
+  it("lets only the family close", async () => {
+    const stranger = Keypair.generate();
+    await expectAnchorError(
+      program.methods
+        .closePolicy()
+        .accountsPartial({ family: stranger.publicKey, policy })
+        .signers([stranger])
+        .rpc(),
+      "ConstraintHasOne"
+    );
+    expect(await provider.connection.getAccountInfo(policy)).to.not.equal(null);
+  });
+
+  it("closes the policy and returns every lamport to the family", async () => {
+    const vault = await provider.connection.getBalance(policy);
+    const before = await provider.connection.getBalance(family);
+    const sig = await program.methods
+      .closePolicy()
+      .accountsPartial({ family, policy })
+      .rpc({ commitment: "confirmed" });
+    const tx = await provider.connection.getTransaction(sig, {
+      commitment: "confirmed",
+      maxSupportedTransactionVersion: 0,
+    });
+    const after = await provider.connection.getBalance(family, "confirmed");
+
+    expect(after - before).to.equal(vault - tx!.meta!.fee);
+    expect(await provider.connection.getAccountInfo(policy, "confirmed")).to.equal(
+      null
+    );
+  });
 });

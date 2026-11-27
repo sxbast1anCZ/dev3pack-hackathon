@@ -156,6 +156,16 @@ pub mod remedio_seguro {
         **pharmacy_info.try_borrow_mut_lamports()? += lamports;
         Ok(())
     }
+
+    pub fn set_paused(ctx: Context<SetPaused>, paused: bool) -> Result<()> {
+        ctx.accounts.policy.paused = paused;
+        Ok(())
+    }
+
+    pub fn close_policy(_ctx: Context<ClosePolicy>) -> Result<()> {
+        // `close = family` returns every lamport (vault and rent) to family.
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -185,6 +195,21 @@ pub struct AgentPay<'info> {
     /// CHECK: validated in the handler against `policy.pharmacies`.
     #[account(mut)]
     pub pharmacy: UncheckedAccount<'info>,
+}
+
+#[derive(Accounts)]
+pub struct SetPaused<'info> {
+    pub family: Signer<'info>,
+    #[account(mut, has_one = family)]
+    pub policy: Account<'info, Policy>,
+}
+
+#[derive(Accounts)]
+pub struct ClosePolicy<'info> {
+    #[account(mut)]
+    pub family: Signer<'info>,
+    #[account(mut, has_one = family, close = family)]
+    pub policy: Account<'info, Policy>,
 }
 
 #[account]
