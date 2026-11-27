@@ -19,6 +19,35 @@ scaffolded; until then this file lists what does not depend on the stack.
 
 Everything runs on devnet. No real funds at any point.
 
+## Rust, the Solana CLI and Anchor (lane `program`)
+
+This is the slowest step the first time. Start it before anything else. Source: the Anchor
+installation guide, `anchor-lang.com/docs/installation`, read on 2026-11-27.
+
+On Mac and Linux, one command installs Rust, the Solana CLI, the Anchor CLI, Node.js and Yarn:
+
+```
+curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.dev | bash
+```
+
+On Windows, the guide requires WSL: install it first and run that command in the Ubuntu terminal.
+
+Restart the terminal, then check:
+
+```
+rustc --version
+solana --version
+anchor --version
+```
+
+The guide showed Anchor CLI 1.2.2 on that date. Write the versions you got in your first pull
+request: the TypeScript client in `api/` and `app/` must use the same Anchor version as the CLI.
+
+If the one command fails, the same guide has the steps one by one. If nothing compiles by 21:00 on
+Friday, build and deploy from Solana Playground (`beta.solpg.io`) and keep the source in `program/`.
+
+Point the CLI at devnet: `solana config set --url devnet`.
+
 ## Secrets
 
 - Copy `.env.example` to `.env`. The values are shared in the team chat, never in git.
