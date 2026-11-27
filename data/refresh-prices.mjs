@@ -141,7 +141,7 @@ function env(name) {
 
 async function supabase(path, { method = 'GET', body, prefer } = {}) {
   const key = env('SUPABASE_SERVICE_ROLE_KEY')
-  const res = await fetch(`${env('SUPABASE_URL')}/rest/v1/${path}`, {
+  const res = await fetch(`${env('SUPABASE_URL').replace(/\/+$/, '')}/rest/v1/${path}`, {
     method,
     headers: {
       apikey: key,
