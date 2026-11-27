@@ -7,11 +7,13 @@ What each document is for and which to read first. If two documents disagree, th
 
 | Step | Document | Why |
 | --- | --- | --- |
-| 1 | `hackathon-requirements.md` | What the hackathon asks and how it is judged |
-| 2 | `../AGENTS.md` | The rules every person and every agent follows |
-| 3 | `decisions.md` | Every decision already taken. Read it before changing anything |
+| 1 | `agent-handoff.md` | The project in five lines, the rules that bite, and your task cards |
+| 2 | `contracts.md` | What your lane can assume about the others |
+| 3 | `../AGENTS.md` | The rules every person and every agent follows |
 | 4 | `team-setup.md` | What to install and how to get a devnet wallet |
 | 5 | `../CONTRIBUTING.md` | Branches, commits and pull requests |
+| 6 | `hackathon-requirements.md` | What the hackathon asks and how it is judged |
+| 7 | `decisions.md` | Every decision already taken, and why |
 
 ## All documents
 
@@ -25,9 +27,9 @@ What each document is for and which to read first. If two documents disagree, th
 | `decisions.md` | The decision record, newest last | Current |
 | `team-setup.md` | Tools, wallets and accounts per developer | Current |
 | `submission/checklist.md` | Milestones and the checklist for the final submission | Current |
-| `superpowers/specs/` | The product design, once approved | Not written yet |
-| `contracts.md` | The interfaces between lanes: program accounts and instructions, agent tools, database tables | Not written yet: needs the product design |
-| `agent-handoff.md` | Task cards per lane, for an agent that starts with no context | Not written yet: needs the product design |
+| `superpowers/specs/2026-11-27-remedio-seguro-design.md` | The product design: what it is, for whom, what is in and out, and the limits we state | Current |
+| `contracts.md` | The interfaces between lanes: program accounts and instructions, agent tools, database tables | Current |
+| `agent-handoff.md` | Task cards per lane, for an agent that starts with no context | Current |
 
 ## Which document answers my question
 

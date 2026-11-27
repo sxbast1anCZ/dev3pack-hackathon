@@ -71,12 +71,9 @@ For each track marked in the form we must explain how it is integrated and name 
 | ElevenLabs | 3 months of Scale tier per member | Use one integration path: speech, transcription, agents, and others |
 | Supabase | Credits per member | Use Supabase |
 
-Stretch, only if the core is finished: **Solana Mobile** (Seeker phones for the top 3 teams). It
-requires a native Android app started from an official template (`npx solana-mobile@latest create`),
-Expo, React Native or Kotlin, a working Mobile Wallet Adapter flow that judges run from an
-installable APK, and a demo video of that flow. Wrapped web apps and PWAs are rejected.
-
-Not targeted: Best DeFi App, Pollar, Byte.
+Not targeted: Best DeFi App, Pollar, Byte and Solana Mobile. Solana Mobile requires a native
+Android app started from an official template, with a working Mobile Wallet Adapter flow that
+judges run from an installable APK; wrapped web apps and PWAs are rejected.
 
 ## Rules
 

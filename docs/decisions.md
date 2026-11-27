@@ -91,3 +91,75 @@ and CI checks for commit format and secrets (Kuntur AI).
 
 **Not adopted:** NoahAI as the builder. The team builds with its own agents. The method's own point
 stands: plan first, then build from a closed specification.
+
+## 2026-11-27. Product idea changed to Remedio Seguro
+
+**State:** Agreed. **Who:** Sebastián, on a proposal by Ruben. Replaces "Product idea: a tag that
+talks".
+
+A voice agent buys medicines for an older person, inside spending limits that the family sets on
+Solana. Design: `docs/superpowers/specs/2026-11-27-remedio-seguro-design.md`.
+
+Why the tag was dropped: a gap analysis by Ruben found that its on-chain record could be called
+decoration, that voice was justified for only one kind of user, and that Firecrawl had no reliable
+sources to read.
+
+This idea is a variant of the "voice shopper with on-chain spending limits" that an earlier entry
+rejected as a crowded category. It is taken up again because the user changes the case: for an
+older person voice is the interface, the family is a second party that sets the rules, and Chilean
+pharmacy prices are public and can be read live. The category is still crowded: the difference goes
+in the first line of the pitch.
+
+It is not medicine traceability. What is recorded on-chain is purchases.
+
+## 2026-11-27. Tracks, revised
+
+**State:** Agreed. **Who:** Sebastián. Replaces "Tracks we target".
+
+Main track, Chile local track, Best Agentic App, Firecrawl, ElevenLabs and Supabase. Solana Mobile
+and NFC are dropped: there is no physical tag any more. This also ends "Web first, Android later":
+there is no Android port.
+
+## 2026-11-27. Lanes and owners
+
+**State:** Agreed. **Who:** Sebastián.
+
+| Lane | Owner |
+| --- | --- |
+| `program` | Ruben |
+| `agent` | Victor |
+| `web` | Open: whoever takes it first |
+| `data`, plus orchestration, review and merge | Sebastián |
+
+Sebastián also codes. He takes `data` because it is off the critical path of the first flow and
+survives interruptions for review. Claude, in Sebastián's session, writes the repository documents
+and reviews each pull request before it is merged.
+
+Risk: `web` has no owner and the first task of that lane (scaffold and publish) unblocks `agent`.
+If nobody has taken it by 19:30 on Friday, Victor does that first task.
+
+## 2026-11-27. Payments settle in devnet SOL at a fixed rate
+
+**State:** Proposed by the agent. Ruben confirms or changes it before coding.
+
+The first flow pays in devnet SOL at 1 peso = 1,000 lamports. No mint, no token accounts, no faucet
+for families. Our own SPL token is the first improvement if time is left.
+
+## 2026-11-27. Scope decisions that close known gaps
+
+**State:** Agreed. **Who:** Sebastián.
+
+- Four instructions: `create_policy`, `agent_pay`, `set_paused`, `close_policy`. No `update_policy`.
+- Allowed medicines are stored on-chain as hashes, and the demo uses fictional people. This is
+  obfuscation, not privacy, and the README says so.
+- The policy account keeps its last 10 purchases, so the history is read from the chain in one call.
+- Each payment stores a hash of its quote (price, source, read time). The chain cannot check that
+  a price is real; this lets the family audit it.
+- The budget period is configurable, so the guest policy renews itself.
+- Every tool call from the voice agent carries a shared secret. A quote works once and expires in
+  5 minutes.
+- Prices are read from a cache that states its age. Firecrawl refreshes a fixed catalog of about 10
+  medicines; there is no free search.
+- The demo and the video include a rejection by the program.
+- The agent gives no medical advice, suggests no dose, swaps no medicine and proposes nothing out
+  of stock.
