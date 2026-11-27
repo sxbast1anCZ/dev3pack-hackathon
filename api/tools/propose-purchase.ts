@@ -5,14 +5,14 @@ import {
   type ProposePurchaseResponse,
 } from '../_lib/contract.js'
 import { agentTool, isObject, nonEmptyString, type Validator } from '../_lib/http.js'
-import { findMockProductById } from '../_lib/mock-catalog.js'
+import { loadCatalog } from '../_lib/catalog.js'
 import { pharmacyWallet } from '../_lib/pharmacies.js'
 import { now, quoteStore } from '../_lib/quotes.js'
 import { chain, checkPolicy, isPublicKey, productHash } from '../_lib/solana.js'
 
 // POST /api/tools/propose-purchase. Agent tool propose_purchase (docs/contracts.md, section 2).
-// Prices are simulated until card A6. The quote is stored (card A3). The policy is read from the
-// chain and checked with the program's rules to set within_policy (card A5).
+// The price is the latest reading of the prices table (card A6). The quote is stored (card A3). The
+// policy is read from the chain and checked with the program's rules to set within_policy (card A5).
 
 const validate: Validator<ProposePurchaseRequest> = (body) => {
   if (!isObject(body)) return { ok: false, error: 'body must be an object' }
@@ -23,10 +23,11 @@ const validate: Validator<ProposePurchaseRequest> = (body) => {
 }
 
 export async function proposePurchase(body: ProposePurchaseRequest): Promise<ProposePurchaseResponse> {
-  const entry = findMockProductById(body.product_id)
-  if (!entry) return { ok: false, reason: 'PRODUCT_NOT_IN_CATALOG' }
+  const data = await loadCatalog()
+  const product = data.products.find((p) => p.id === body.product_id)
+  if (!product) return { ok: false, reason: 'PRODUCT_NOT_IN_CATALOG' }
 
-  const offer = entry.offers.find((o) => o.pharmacy === body.pharmacy)
+  const offer = data.prices.find((p) => p.product_id === product.id && p.pharmacy === body.pharmacy)
   if (!offer) return { ok: false, reason: 'PRICE_UNAVAILABLE' }
   if (!offer.in_stock) return { ok: false, reason: 'OUT_OF_STOCK' }
 
@@ -37,21 +38,20 @@ export async function proposePurchase(body: ProposePurchaseRequest): Promise<Pro
   const policyReason = checkPolicy(policy, {
     agent: chain().agentAddress(),
     pharmacy: wallet,
-    product: productHash(entry.product.id),
+    product: productHash(product.id),
     amount: BigInt(offer.price),
     now: BigInt(Math.floor(at.getTime() / 1000)),
   })
 
-  const readAt = new Date(at.getTime() - offer.read_minutes_ago * 60_000).toISOString()
   const quote = await quoteStore().create(
-    { policy: body.policy, product_id: entry.product.id, pharmacy: offer.pharmacy, price: offer.price, read_at: readAt },
+    { policy: body.policy, product_id: product.id, pharmacy: offer.pharmacy, price: offer.price, read_at: offer.read_at },
     at,
   )
 
   return {
     ok: true,
     quote_id: quote.id,
-    product_id: entry.product.id,
+    product_id: product.id,
     pharmacy: offer.pharmacy,
     price: offer.price,
     expires_in_seconds: QUOTE_TTL_SECONDS,

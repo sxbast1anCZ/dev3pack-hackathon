@@ -12,6 +12,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import anchor, { type Idl } from '@anchor-lang/core'
 import idl from '../../idl/remedio_seguro.json' with { type: 'json' }
+import { setCatalogSource } from '../_lib/catalog.js'
 import type { ConfirmPurchaseResponse, PharmacyId, ProposePurchaseResponse } from '../_lib/contract.js'
 import { setPharmacyWallets } from '../_lib/pharmacies.js'
 import { MemoryQuoteStore, setQuoteStore } from '../_lib/quotes.js'
@@ -97,6 +98,22 @@ async function main(): Promise<void> {
   process.env.AGENT_TOOL_SECRET = randomBytes(16).toString('hex')
   setQuoteStore(new MemoryQuoteStore())
   setPharmacyWallets(async (id) => wallets[id])
+  setCatalogSource(async () => ({
+    products: [
+      {
+        id: 'losartan-50mg-30',
+        name: 'Losartán 50 mg, 30 comprimidos',
+        active_ingredient: 'losartan',
+        dose: '50 mg',
+        quantity: 30,
+        requires_prescription: true,
+        is_bioequivalent: true,
+        aliases: ['losartán'],
+      },
+    ],
+    sources: [],
+    prices: [{ product_id: 'losartan-50mg-30', pharmacy: 'salcobrand', price: 2599, in_stock: true, read_at: new Date().toISOString() }],
+  }))
   setChain(new AnchorChain(RPC, agent))
 
   console.log(`program: ${(idl as { address: string }).address}`)
