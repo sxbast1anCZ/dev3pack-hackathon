@@ -104,6 +104,52 @@ async function main() {
     if (err.error.errorCode.code !== "OverPurchaseCap") throw err;
   }
   console.log("V1 passed");
+
+  // P3: pause refuses payment, resume pays again, close refunds the family.
+  await program.methods.setPaused(true).accountsPartial({ family, policy }).rpc();
+  try {
+    await program.methods
+      .agentPay(new BN(1_000), product, sha256("smoke-quote-3"))
+      .accountsPartial({ agent: agent.publicKey, policy, pharmacy })
+      .signers([agent])
+      .rpc();
+    throw new Error("agent_pay on a paused policy succeeded");
+  } catch (err) {
+    if (!(err instanceof anchor.AnchorError)) throw err;
+    console.log("agent_pay while paused error:", err.error.errorCode.code);
+    if (err.error.errorCode.code !== "Paused") throw err;
+  }
+  await program.methods.setPaused(false).accountsPartial({ family, policy }).rpc();
+  const resumeSig = await program.methods
+    .agentPay(new BN(1_000), product, sha256("smoke-quote-4"))
+    .accountsPartial({ agent: agent.publicKey, policy, pharmacy })
+    .signers([agent])
+    .rpc();
+  console.log("agent_pay after resume signature:", resumeSig);
+
+  const closeSig = await program.methods
+    .closePolicy()
+    .accountsPartial({ family, policy })
+    .rpc();
+  if ((await connection.getAccountInfo(policy, "confirmed")) !== null) {
+    throw new Error("policy still exists after close_policy");
+  }
+  console.log("close_policy signature:", closeSig);
+
+  // Send what is left on the temporary agent back to the family, which pays
+  // the fee, so the agent account ends empty.
+  const rest = await connection.getBalance(agent.publicKey, "confirmed");
+  await provider.sendAndConfirm(
+    new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: agent.publicKey,
+        toPubkey: family,
+        lamports: rest,
+      })
+    ),
+    [agent]
+  );
+  console.log("P3 passed");
 }
 
 main().catch((err) => {
