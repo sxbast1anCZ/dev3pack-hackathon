@@ -37,3 +37,43 @@ export type SearchPricesResponse =
       offers: Offer[]
     }
   | { ok: false; reason: 'PRODUCT_NOT_IN_CATALOG' }
+
+// Error names of the program (docs/contracts.md, section 1). The voice agent turns each into a sentence.
+export type ProgramError =
+  | 'Paused'
+  | 'UnauthorizedAgent'
+  | 'PharmacyNotAllowed'
+  | 'ProductNotAllowed'
+  | 'ZeroAmount'
+  | 'OverPurchaseCap'
+  | 'OverPeriodBudget'
+  | 'InsufficientVault'
+
+export interface ProposePurchaseRequest {
+  policy: string
+  product_id: string
+  pharmacy: PharmacyId
+}
+
+export type ProposePurchaseResponse =
+  | {
+      ok: true
+      quote_id: string
+      product_id: string
+      pharmacy: PharmacyId
+      price: number
+      expires_in_seconds: number
+      within_policy: boolean
+      policy_reason: ProgramError | null
+    }
+  | { ok: false; reason: 'PRODUCT_NOT_IN_CATALOG' | 'OUT_OF_STOCK' | 'PRICE_UNAVAILABLE' }
+
+export interface ConfirmPurchaseRequest {
+  quote_id: string
+}
+
+export type ConfirmPurchaseResponse =
+  | { ok: true; signature: string; explorer_url: string; price: number; pharmacy: PharmacyId }
+  | { ok: false; reason: 'QUOTE_NOT_FOUND' | 'QUOTE_EXPIRED' | 'QUOTE_ALREADY_USED' | ProgramError }
+
+export const QUOTE_TTL_SECONDS = 300

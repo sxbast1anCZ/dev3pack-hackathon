@@ -35,3 +35,7 @@ export function findMockProduct(query: string): MockEntry | undefined {
   const q = normalize(query)
   return MOCK_CATALOG.find((entry) => entry.aliases.some((alias) => q.includes(normalize(alias))))
 }
+
+export function findMockProductById(id: string): MockEntry | undefined {
+  return MOCK_CATALOG.find((entry) => entry.product.id === id)
+}
