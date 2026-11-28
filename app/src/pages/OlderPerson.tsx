@@ -23,6 +23,8 @@ const EMPTY_CATALOG: Catalog = {
     ['ahumada', 'Ahumada'],
     ['salcobrand', 'Salcobrand'],
   ]),
+  products: [],
+  pharmacies: [],
 }
 
 function isValidAddress(value: string): boolean {

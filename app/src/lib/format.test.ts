@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { pesos, periodLabel, shortAddress } from './format.ts'
+import { periodLabel, periodNow, pesos, shortAddress } from './format.ts'
 
 test('pesos formats Chilean pesos', () => {
   assert.equal(pesos(0), '$0')
@@ -15,6 +15,14 @@ test('periodLabel formats hours, days, minutes and seconds', () => {
   assert.equal(periodLabel(2592000), '30 días')
   assert.equal(periodLabel(120), '2 minutos')
   assert.equal(periodLabel(45), '45 segundos')
+})
+
+test('periodNow returns natural phrasing for standard periods', () => {
+  assert.equal(periodNow(3600), 'esta hora')
+  assert.equal(periodNow(86400), 'hoy')
+  assert.equal(periodNow(604800), 'esta semana')
+  assert.equal(periodNow(2592000), 'este mes')
+  assert.equal(periodNow(120), 'en este período')
 })
 
 test('shortAddress keeps the first 4 and last 4 characters', () => {
