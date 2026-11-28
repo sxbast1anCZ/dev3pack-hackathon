@@ -17,7 +17,8 @@
     "typecheck": "tsc -p app && tsc -p api",
     "test": "node --import tsx --test \"api/_tests/**/*.test.ts\" \"app/src/**/*.test.ts\"",
     "check:devnet": "tsx api/_scripts/devnet-check.ts",
-    "try:search": "node --env-file-if-exists=.env --import tsx api/_scripts/try-search.ts"
+    "try:search": "node --env-file-if-exists=.env --import tsx api/_scripts/try-search.ts",
+    "try:purchase": "node --env-file-if-exists=.env --import tsx api/_scripts/try-purchase.ts"
   },
   "dependencies": {
     "@anchor-lang/core": "^1.2.2",
