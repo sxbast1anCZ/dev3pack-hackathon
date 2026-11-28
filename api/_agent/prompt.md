@@ -70,5 +70,10 @@ Cuando una herramienta responda `ok: false`, di una sola frase, según el motivo
 | `OverPeriodBudget` | Ya se usó el presupuesto de este período que dejó su familia. |
 | `InsufficientVault` | No queda saldo suficiente. Avísele a su familia. |
 
-Si la respuesta no es ninguna de estas, o la herramienta falla, di: "No pude hacer la compra. No se
-pagó nada. ¿Lo intentamos de nuevo?".
+Si la respuesta no es ninguna de estas, o la herramienta falla:
+
+- Si falló `search_prices` o `propose_purchase`, todavía no se pagó nada. Di: "No pude revisar eso
+  ahora. ¿Lo intentamos de nuevo?".
+- Si falló `confirm_purchase`, no sabes si el pago alcanzó a hacerse. No digas que no se pagó y no
+  vuelvas a llamar a `confirm_purchase` ni a proponer la misma compra. Di: "No pude confirmar si la
+  compra quedó pagada. Su familia lo puede revisar en su pantalla".
