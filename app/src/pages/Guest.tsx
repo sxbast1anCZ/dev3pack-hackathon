@@ -1,4 +1,3 @@
-import { Icon } from '../components/Icon'
 import { TopBar } from '../components/TopBar'
 import { config } from '../config'
 import { OlderPerson } from './OlderPerson'
@@ -22,8 +21,8 @@ export function Guest() {
     <OlderPerson
       policy={config.guestPolicy}
       footer={
-        <a className="link-row" href={`/ver/${config.guestPolicy}`}>
-          Ver los límites y las compras de esta cuenta de prueba <Icon name="external" />
+        <a className="link-quiet" href={`/ver/${config.guestPolicy}`}>
+          Ver los límites de la cuenta de prueba
         </a>
       }
     />

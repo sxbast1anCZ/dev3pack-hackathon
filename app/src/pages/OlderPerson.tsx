@@ -1,17 +1,20 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { web3 } from '@anchor-lang/core'
-import { ConversationProvider, useConversation } from '@elevenlabs/react'
+import { ConversationProvider, useConversation, type ConversationStatus } from '@elevenlabs/react'
 import { Icon } from '../components/Icon'
-import { Brand } from '../components/TopBar'
 import { config } from '../config'
 import { loadCatalog, type Catalog } from '../lib/catalog'
 import { errorSentence } from '../lib/errors'
-import { pesos } from '../lib/format'
+import { pesos, shortProductName } from '../lib/format'
+import { normalize } from '../lib/search'
 import {
   parseProposal,
   parsePurchase,
+  parseSearch,
+  savingsFor,
   type Proposal,
   type Purchase,
+  type Search,
 } from '../lib/toolResults'
 
 const EMPTY_CATALOG: Catalog = {
@@ -27,6 +30,25 @@ const EMPTY_CATALOG: Catalog = {
   pharmacies: [],
 }
 
+type ElderView = 'idle' | 'connecting' | 'listening' | 'offer' | 'buying' | 'blocked' | 'done'
+
+function resolveView(
+  status: ConversationStatus,
+  proposal: Proposal | null,
+  purchase: Purchase | null,
+  saidYes: boolean,
+): ElderView {
+  if (purchase?.ok) return 'done'
+  if (purchase && !purchase.ok) return 'blocked'
+  if (proposal && (!proposal.ok || !proposal.withinPolicy)) return 'blocked'
+  if (proposal && proposal.ok && proposal.withinPolicy) {
+    return saidYes ? 'buying' : 'offer'
+  }
+  if (status === 'connecting') return 'connecting'
+  if (status === 'connected') return 'listening'
+  return 'idle'
+}
+
 function isValidAddress(value: string): boolean {
   try {
     new web3.PublicKey(value)
@@ -38,10 +60,13 @@ function isValidAddress(value: string): boolean {
 
 function Talk({ policy, footer }: { policy: string; footer?: ReactNode }) {
   const [catalog, setCatalog] = useState<Catalog>(EMPTY_CATALOG)
-  const [lastAgentMessage, setLastAgentMessage] = useState('')
+  const [search, setSearch] = useState<Search | null>(null)
   const [proposal, setProposal] = useState<Proposal | null>(null)
   const [purchase, setPurchase] = useState<Purchase | null>(null)
+  const [saidYes, setSaidYes] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
+
+  const viewRef = useRef<ElderView>('idle')
 
   useEffect(() => {
     let active = true
@@ -53,10 +78,15 @@ function Talk({ policy, footer }: { policy: string; footer?: ReactNode }) {
     }
   }, [])
 
-  const { startSession, endSession, status, mode } = useConversation({
+  const { startSession, endSession, sendUserMessage, status, mode } = useConversation({
     onMessage(props) {
-      if (props.source === 'ai') {
-        setLastAgentMessage(props.message)
+      if (props.source !== 'user') return
+      if (viewRef.current !== 'offer') return
+      const text = normalize(props.message).trim()
+      if (text.startsWith('si')) {
+        setSaidYes(true)
+      } else if (text.startsWith('no')) {
+        setProposal(null)
       }
     },
     onAgentToolResponse(props) {
@@ -64,9 +94,12 @@ function Talk({ policy, footer }: { policy: string; footer?: ReactNode }) {
         console.log('[tool]', props)
       }
       if ('full_tool_result' in props && typeof props.full_tool_result === 'string') {
-        if (props.tool_name === 'propose_purchase') {
+        if (props.tool_name === 'search_prices') {
+          setSearch(parseSearch(props.full_tool_result))
+        } else if (props.tool_name === 'propose_purchase') {
           setProposal(parseProposal(props.full_tool_result))
           setPurchase(null)
+          setSaidYes(false)
         } else if (props.tool_name === 'confirm_purchase') {
           setPurchase(parsePurchase(props.full_tool_result))
         }
@@ -78,6 +111,9 @@ function Talk({ policy, footer }: { policy: string; footer?: ReactNode }) {
     },
     onDisconnect() {},
   })
+
+  const view = resolveView(status, proposal, purchase, saidYes)
+  viewRef.current = view
 
   async function handleStart() {
     setProblem(null)
@@ -107,128 +143,168 @@ function Talk({ policy, footer }: { policy: string; footer?: ReactNode }) {
   }
 
   function handleStop() {
-    setProblem(null)
     endSession()
+    setSearch(null)
+    setProposal(null)
+    setPurchase(null)
+    setSaidYes(false)
+    setProblem(null)
   }
 
-  const productName = (productId: string) => catalog.productNameById.get(productId) ?? productId
+  function onYes() {
+    sendUserMessage('Sí')
+    setSaidYes(true)
+  }
+
+  function onNo() {
+    sendUserMessage('No')
+    setProposal(null)
+  }
+
+  function onAnother() {
+    setSearch(null)
+    setProposal(null)
+    setPurchase(null)
+    setSaidYes(false)
+    setProblem(null)
+    if (status !== 'connected' && status !== 'connecting') {
+      handleStart()
+    }
+  }
+
   const pharmacyName = (pharmacyId: string) => catalog.pharmacyNameById.get(pharmacyId) ?? pharmacyId
 
+  const fullProductName = proposal?.ok
+    ? (catalog.productNameById.get(proposal.productId) ??
+      (search?.productId === proposal.productId ? search.productName : undefined))
+    : undefined
+  const shortMed = fullProductName ? shortProductName(fullProductName) : ''
+  const medicinePhrase = shortMed ? `tu ${shortMed}` : 'tu remedio'
+
+  const savings = savingsFor(search, proposal)
+
+  const blockedReason =
+    purchase && !purchase.ok
+      ? purchase.reason
+      : proposal && !proposal.ok
+        ? proposal.reason
+        : proposal && proposal.ok && !proposal.withinPolicy
+          ? (proposal.policyReason ?? '')
+          : ''
+
+  const showTopStop =
+    view === 'listening' || view === 'offer' || view === 'buying' || view === 'blocked'
+
   return (
-    <main className="phone">
-      <Brand />
+    <main className="elder">
+      <div className="elder-top">
+        {showTopStop && (
+          <button type="button" className="quiet-btn" onClick={handleStop}>
+            Terminar
+          </button>
+        )}
+      </div>
 
-      {status === 'connected' && (
-        <div className="status">
-          {mode === 'listening' ? (
-            <>
-              <span className="status-dot" />
-              Te escucho…
-            </>
-          ) : (
-            <>
-              <Icon name="speaking" />
-              Hablando…
-            </>
-          )}
-        </div>
-      )}
-
-      {lastAgentMessage && (
-        <div>
-          <p className="said-label">El asistente dijo:</p>
-          <p className="said">“{lastAgentMessage}”</p>
-        </div>
-      )}
-
-      {proposal && !purchase && (
-        proposal.ok ? (
-          proposal.withinPolicy ? (
-            <section className="proposal" aria-label="Propuesta">
-              <div className="proposal-top">
-                <span className="eyebrow">Propuesta</span>
-                <span className="badge">Dentro de los límites</span>
-              </div>
-              <p className="product-name">{productName(proposal.productId)}</p>
-              <p className="where">
-                <Icon name="store" />
-                {pharmacyName(proposal.pharmacy)}
-              </p>
-              <p className="price">{pesos(proposal.price)}</p>
-              <p className="hint">Di «sí» para comprar o «no» para cancelar.</p>
-            </section>
-          ) : (
-            <section className="proposal proposal-warn" aria-label="Propuesta">
-              <div className="proposal-top">
-                <span className="eyebrow">Propuesta</span>
-                <span className="badge badge-warn">No se puede comprar</span>
-              </div>
-              <p className="product-name">{productName(proposal.productId)}</p>
-              <p className="where">
-                <Icon name="store" />
-                {pharmacyName(proposal.pharmacy)}
-              </p>
-              <p className="price price-struck">{pesos(proposal.price)}</p>
-              <p className="reason">
-                <Icon name={proposal.policyReason === 'Paused' ? 'pause' : 'alert'} size={24} />
-                {errorSentence(proposal.policyReason ?? '')}
-              </p>
-            </section>
-          )
-        ) : (
-          <p className="reason">
-            <Icon name="alert" size={24} />
-            {errorSentence(proposal.reason)}
-          </p>
-        )
-      )}
-
-      {purchase && (
-        purchase.ok ? (
-          <>
-            <section className="done" aria-label="Resultado">
-              <span className="done-check">
-                <Icon name="check" size={36} strokeWidth={2.8} />
+      {view === 'idle' && (
+        <>
+          <div className="elder-center">
+            <button
+              type="button"
+              className="mic-ring"
+              onClick={handleStart}
+              aria-label="Toca para hablar"
+            >
+              <span className="mic">
+                <Icon name="mic" size={72} strokeWidth={2} />
               </span>
-              <p className="done-title">Compra lista</p>
-              <p className="done-line">
-                {pesos(purchase.price)} en {pharmacyName(purchase.pharmacy)}.
-              </p>
-              {proposal?.ok && <p className="done-sub">{productName(proposal.productId)}</p>}
-            </section>
-            <a className="link-row" href={purchase.explorerUrl} target="_blank" rel="noreferrer">
-              Ver comprobante <Icon name="external" />
-            </a>
-          </>
-        ) : (
-          <p className="reason">
-            <Icon name="alert" size={24} />
-            {errorSentence(purchase.reason)}
+            </button>
+            <p className="elder-q">Toca para hablar</p>
+            <p className="elder-sub">Pide tu remedio en voz alta.</p>
+            {problem && <p className="elder-sub error">{problem}</p>}
+          </div>
+          {footer}
+        </>
+      )}
+
+      {view === 'connecting' && (
+        <div className="elder-center">
+          <button type="button" className="mic-ring" disabled aria-label="Conectando">
+            <span className="mic">
+              <Icon name="mic" size={72} strokeWidth={2} />
+            </span>
+          </button>
+          <p className="elder-q">Conectando…</p>
+        </div>
+      )}
+
+      {view === 'listening' && (
+        <div className="elder-center">
+          <div className="mic-ring" aria-hidden="true">
+            <span className="mic">
+              <Icon name="mic" size={72} strokeWidth={2} />
+            </span>
+          </div>
+          <p className="elder-q">¿Qué remedio necesitas?</p>
+          <p className="elder-sub">
+            {mode === 'speaking' ? 'Te estoy respondiendo…' : 'Dilo en voz alta.'}
           </p>
-        )
+        </div>
       )}
 
-      {problem && <p className="error">{problem}</p>}
-
-      <div className="spacer" />
-
-      {status === 'connected' ? (
-        <button type="button" className="big-button big-button-dark" onClick={handleStop}>
-          <Icon name="stop" size={34} />
-          Terminar
-        </button>
-      ) : status === 'connecting' ? (
-        <button type="button" className="big-button" disabled>
-          Conectando…
-        </button>
-      ) : (
-        <button type="button" className="big-button" onClick={handleStart}>
-          <Icon name="mic" size={34} />
-          Toca para hablar
-        </button>
+      {(view === 'offer' || view === 'buying') && proposal?.ok && (
+        <>
+          <p className="elder-q elder-q-top">¿Compro {medicinePhrase}?</p>
+          <section className="offer" aria-label="Propuesta">
+            <span className="offer-store">{pharmacyName(proposal.pharmacy)}</span>
+            <span className="offer-price">{pesos(proposal.price)}</span>
+            {savings && <span className="save">Ahorras {pesos(savings.amount)}</span>}
+          </section>
+          <div className="spacer" />
+          <button type="button" className="yes" onClick={onYes} disabled={view === 'buying'}>
+            {view === 'buying' ? 'Comprando…' : 'Sí'}
+          </button>
+          {view !== 'buying' && (
+            <button type="button" className="no" onClick={onNo}>
+              No
+            </button>
+          )}
+          {view !== 'buying' && <p className="elder-hint">O dilo en voz alta.</p>}
+        </>
       )}
 
-      {footer}
+      {view === 'blocked' && (
+        <>
+          <div className="elder-center">
+            <span className="ring-warn">
+              <Icon name={blockedReason === 'Paused' ? 'pause' : 'alert'} size={64} />
+            </span>
+            <p className="elder-q">No se puede comprar.</p>
+            <p className="elder-sub">{errorSentence(blockedReason)}</p>
+          </div>
+          <button type="button" className="yes yes-dark" onClick={onAnother}>
+            Pedir otro remedio
+          </button>
+        </>
+      )}
+
+      {view === 'done' && purchase?.ok && (
+        <>
+          <div className="elder-center">
+            <span className="ring-ok">
+              <Icon name="check" size={96} strokeWidth={2.6} />
+            </span>
+            <p className="elder-q elder-q-xl">Listo.</p>
+            <p className="elder-sub elder-sub-lg">Compraste {medicinePhrase}.</p>
+            {savings && <span className="save">Ahorraste {pesos(savings.amount)}</span>}
+          </div>
+          <button type="button" className="yes yes-dark" onClick={onAnother}>
+            Pedir otro remedio
+          </button>
+          <a className="link-quiet" href={purchase.explorerUrl} target="_blank" rel="noreferrer">
+            Ver comprobante
+          </a>
+        </>
+      )}
     </main>
   )
 }
@@ -236,12 +312,14 @@ function Talk({ policy, footer }: { policy: string; footer?: ReactNode }) {
 export function OlderPerson({ policy, footer }: { policy: string; footer?: ReactNode }) {
   if (!isValidAddress(policy)) {
     return (
-      <main className="phone">
-        <Brand />
-        <p className="error">Este enlace no es válido.</p>
-        <p>
-          <a href="/">Volver al inicio</a>
-        </p>
+      <main className="elder">
+        <div className="elder-top" />
+        <div className="elder-center">
+          <p className="elder-q">Este enlace no es válido.</p>
+          <a className="link-quiet" href="/">
+            Volver al inicio
+          </a>
+        </div>
       </main>
     )
   }

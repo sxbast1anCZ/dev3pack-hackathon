@@ -81,7 +81,8 @@ devnet with the IDL, and the names of medicines and pharmacies from Supabase
 (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` in `.env`).
 
 The older person's page is at `/p/<policy address>`. It starts the ElevenLabs conversation with
-the dynamic variable `policy` set to that address (`VITE_ELEVENLABS_AGENT_ID` in `.env`).
+the dynamic variable `policy` set to that address (`VITE_ELEVENLABS_AGENT_ID` in `.env`). The
+person can confirm by voice or with the Sí / No buttons, which send the same word to the agent.
 
 The family screen is at `/familia`. It connects Phantom on devnet, creates a policy, pauses it and
 closes it. The person's name is kept only in the browser (`localStorage`).
