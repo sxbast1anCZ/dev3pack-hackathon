@@ -14,7 +14,7 @@ import {
   listFamilyPolicies,
   setPaused,
 } from '../lib/familyTx'
-import { periodLabel, periodNow, pesos, shortAddress } from '../lib/format'
+import { dateTime, periodLabel, periodNow, pesos, shortAddress } from '../lib/format'
 import { parsePesos, validateForm } from '../lib/formValidation'
 import {
   initials,
@@ -27,15 +27,18 @@ import {
 import { getPhantom, type PhantomProvider } from '../lib/phantom'
 import { readPolicy, type PolicySummary } from '../lib/policy'
 import { periodState, recentPurchases } from '../lib/policyMath'
+import { estimateSavings } from '../lib/savings'
 import type { PickItem } from '../lib/search'
 
 const EMPTY_CATALOG: Catalog = {
   productNameByHash: new Map(),
+  productIdByHash: new Map(),
   productNameById: new Map(),
   pharmacyByWallet: new Map(),
   pharmacyNameById: new Map(),
   products: [],
   pharmacies: [],
+  prices: [],
 }
 
 const PERIOD_OPTIONS = [
@@ -86,6 +89,19 @@ function formatSolFromPesos(amountPesos: number): string {
   return sol.toLocaleString('es-CL', { maximumFractionDigits: 6 })
 }
 
+function policySavingsFor(policy: PolicySummary, catalog: Catalog) {
+  const purchases = recentPurchases(policy.history, policy.purchaseCount)
+  return estimateSavings({
+    purchases: purchases.map((row) => ({
+      amount: row.amount,
+      productId: catalog.productIdByHash.get(policy.allProductSlots[row.productIndex] ?? '') ?? null,
+      pharmacyId:
+        catalog.pharmacyByWallet.get(policy.allPharmacySlots[row.pharmacyIndex] ?? '')?.id ?? null,
+    })),
+    prices: catalog.prices,
+  })
+}
+
 export function Family() {
   const [phantom] = useState<PhantomProvider | null>(() => getPhantom())
   const [publicKey, setPublicKey] = useState<web3.PublicKey | null>(
@@ -98,7 +114,7 @@ export function Family() {
   const [agentReady, setAgentReady] = useState(false)
 
   const [policies, setPolicies] = useState<PolicySummary[]>([])
-  const [loadingPolicies, setLoadingPolicies] = useState(false)
+  const [selected, setSelected] = useState<string>('new')
   const [people, setPeople] = useState<Record<string, Person>>(() => safeReadPeople())
 
   const [copiedPolicy, setCopiedPolicy] = useState<string | null>(null)
@@ -160,22 +176,31 @@ export function Family() {
     }
   }, [])
 
-  const reloadPolicies = useCallback(async (family: web3.PublicKey) => {
-    setLoadingPolicies(true)
-    try {
-      const addresses = await listFamilyPolicies(family)
-      const summaries = await Promise.all(addresses.map((addr) => readPolicy(addr)))
-      setPolicies(summaries.filter((s): s is PolicySummary => s !== null))
-    } catch (err) {
-      console.error('Failed to list family policies:', err)
-    } finally {
-      setLoadingPolicies(false)
-    }
-  }, [])
+  const reloadPolicies = useCallback(
+    async (family: web3.PublicKey, preferredSelected?: string): Promise<PolicySummary[]> => {
+      try {
+        const addresses = await listFamilyPolicies(family)
+        const summaries = await Promise.all(addresses.map((addr) => readPolicy(addr)))
+        const loaded = summaries.filter((s): s is PolicySummary => s !== null)
+        setPolicies(loaded)
+        setSelected((current) => {
+          if (preferredSelected) return preferredSelected
+          if (current !== 'new' && loaded.some((p) => p.address === current)) return current
+          return loaded[0]?.address ?? 'new'
+        })
+        return loaded
+      } catch (err) {
+        console.error('Failed to list family policies:', err)
+        return []
+      }
+    },
+    [],
+  )
 
   useEffect(() => {
     if (!publicKey) {
       setPolicies([])
+      setSelected('new')
       return
     }
     reloadPolicies(publicKey)
@@ -235,7 +260,7 @@ export function Family() {
     try {
       const program = familyProgram(phantom)
       await setPaused(program, publicKey, new web3.PublicKey(policy.address), !policy.paused)
-      await reloadPolicies(publicKey)
+      await reloadPolicies(publicKey, policy.address)
     } catch (err) {
       setCardError((prev) => ({ ...prev, [policy.address]: txErrorMessage(err) }))
     } finally {
@@ -257,7 +282,8 @@ export function Family() {
       await closePolicy(program, publicKey, new web3.PublicKey(policy.address))
       safeRemovePerson(policy.address)
       setPeople(safeReadPeople())
-      await reloadPolicies(publicKey)
+      const remaining = await reloadPolicies(publicKey)
+      setSelected(remaining[0]?.address ?? 'new')
     } catch (err) {
       setCardError((prev) => ({ ...prev, [policy.address]: txErrorMessage(err) }))
     } finally {
@@ -331,7 +357,7 @@ export function Family() {
       setPharmacyWallets([])
       setProductIds([])
 
-      await reloadPolicies(publicKey)
+      await reloadPolicies(publicKey, newAddress)
     } catch (err) {
       setFormError(txErrorMessage(err))
     } finally {
@@ -361,6 +387,23 @@ export function Family() {
         : `${productIds.length} medicamentos`
 
   const nowSeconds = Math.floor(Date.now() / 1000)
+  const savingsByAddress = new Map(
+    policies.map((p) => [p.address, policySavingsFor(p, catalog)] as const),
+  )
+  let totalTodos = 0
+  for (const s of savingsByAddress.values()) {
+    totalTodos += s.total
+  }
+
+  const selectedPolicy =
+    selected === 'new' ? null : (policies.find((p) => p.address === selected) ?? null)
+
+  const pharmacyLabel = (address: string) =>
+    catalog.pharmacyByWallet.get(address)?.name ?? `Farmacia ${shortAddress(address)}`
+  const productShortLabel = (hash: string) => {
+    const full = catalog.productNameByHash.get(hash) ?? 'Medicamento fuera del catálogo'
+    return full.split(',')[0]
+  }
 
   return (
     <>
@@ -383,27 +426,35 @@ export function Family() {
       </TopBar>
 
       <main className="page">
-        <div className="title-stack">
-          <h1>Familia</h1>
-          <p className="lead">
-            Pon las reglas una vez. El asistente solo puede comprar dentro de ellas, y el programa
-            en la cadena lo revisa en cada pago.
-          </p>
-        </div>
-
         {!phantom ? (
-          <div className="notice">
-            <Icon name="info" />
-            <span>
-              Para crear una política necesitas la extensión Phantom.{' '}
-              <a href="https://phantom.com/download" target="_blank" rel="noreferrer">
-                Descárgala aquí
-              </a>
-              .
-            </span>
-          </div>
-        ) : (
           <>
+            <div className="title-stack">
+              <h1>Familia</h1>
+              <p className="lead">
+                Pon las reglas una vez. El asistente solo puede comprar dentro de ellas, y el
+                programa en la cadena lo revisa en cada pago.
+              </p>
+            </div>
+            <div className="notice">
+              <Icon name="info" />
+              <span>
+                Para crear una política necesitas la extensión Phantom.{' '}
+                <a href="https://phantom.com/download" target="_blank" rel="noreferrer">
+                  Descárgala aquí
+                </a>
+                .
+              </span>
+            </div>
+          </>
+        ) : !publicKey ? (
+          <>
+            <div className="title-stack">
+              <h1>Familia</h1>
+              <p className="lead">
+                Pon las reglas una vez. El asistente solo puede comprar dentro de ellas, y el
+                programa en la cadena lo revisa en cada pago.
+              </p>
+            </div>
             <div className="notice">
               <Icon name="info" />
               <span>
@@ -415,111 +466,99 @@ export function Family() {
                 .
               </span>
             </div>
-
             {connectError && <p className="error">{connectError}</p>}
+          </>
+        ) : (
+          <div className="fam">
+            <aside className="fam-list" aria-label="Personas">
+              <h1>Familia</h1>
+              <div className="fam-total">
+                <span>Ahorro estimado entre todos</span>
+                <strong>{pesos(totalTodos)}</strong>
+              </div>
+              <nav aria-label="Elegir persona" className="fam-people">
+                {policies.map((p) => {
+                  const person = people[p.address]
+                  const period = periodState(
+                    p.periodStart,
+                    p.periodSeconds,
+                    p.spentInPeriod,
+                    nowSeconds,
+                  )
+                  const isSelected = selected === p.address
+                  return (
+                    <button
+                      key={p.address}
+                      type="button"
+                      className="fam-person"
+                      aria-current={isSelected ? 'true' : undefined}
+                      onClick={() => {
+                        setSelected(p.address)
+                        setEditingPolicy(null)
+                      }}
+                    >
+                      <span className={p.paused ? 'avatar avatar-warn' : 'avatar'}>
+                        {person?.name ? initials(person.name) : <Icon name="cross" filled />}
+                      </span>
+                      <span className="fam-person-text">
+                        <strong>{personTitle(person) ?? 'Sin nombre'}</strong>
+                        <span>
+                          {pesos(period.spent)} de {pesos(p.periodBudget)}{' '}
+                          {periodNow(p.periodSeconds)}
+                        </span>
+                      </span>
+                      <span className={p.paused ? 'fam-state fam-state-warn' : 'fam-state'}>
+                        {p.paused ? 'En pausa' : 'Activa'}
+                      </span>
+                    </button>
+                  )
+                })}
+              </nav>
+              <button
+                type="button"
+                className="btn btn-dark btn-block"
+                onClick={() => {
+                  setSelected('new')
+                  setEditingPolicy(null)
+                }}
+              >
+                <Icon name="plus" />
+                Cuidar a otra persona
+              </button>
+            </aside>
 
-            {publicKey && (
-              <>
-                <section className="section" aria-label="Personas que cuidas">
-                  <div className="section-head">
-                    <h2>Personas que cuidas</h2>
-                    <span className="muted">
-                      El nombre se guarda solo en este navegador. En la cadena quedan las reglas y
-                      los montos.
-                    </span>
-                  </div>
+            <section className="fam-detail" aria-label="Detalle">
+              {selectedPolicy ? (
+                (() => {
+                  const p = selectedPolicy
+                  const person = people[p.address]
+                  const period = periodState(
+                    p.periodStart,
+                    p.periodSeconds,
+                    p.spentInPeriod,
+                    nowSeconds,
+                  )
+                  const policySavings = savingsByAddress.get(p.address) ?? {
+                    total: 0,
+                    perPurchase: [],
+                    counted: 0,
+                  }
+                  const purchases = recentPurchases(p.history, p.purchaseCount).slice(0, 5)
+                  const isBusy = busyPolicy === p.address
+                  const renewText = period.ended
+                    ? 'Con la próxima compra'
+                    : new Date(period.renewsAt * 1000).toLocaleDateString('es-CL', {
+                        day: 'numeric',
+                        month: 'short',
+                      })
 
-                  {!loadingPolicies && policies.length === 0 && (
-                    <p className="muted">Todavía no creaste ninguna política.</p>
-                  )}
-
-                  <div className="person-grid">
-                    {policies.map((p) => {
-                      const person = people[p.address]
-                      const period = periodState(
-                        p.periodStart,
-                        p.periodSeconds,
-                        p.spentInPeriod,
-                        nowSeconds,
-                      )
-                      const percent =
-                        p.periodBudget > 0
-                          ? Math.min(100, (period.spent / p.periodBudget) * 100)
-                          : 0
-                      const lastPurchase = recentPurchases(p.history, p.purchaseCount)[0]
-                      const lastMedFull = lastPurchase
-                        ? (catalog.productNameByHash.get(
-                            p.allProductSlots[lastPurchase.productIndex] ?? '',
-                          ) ?? 'Medicamento fuera del catálogo')
-                        : null
-                      const lastMedShort = lastMedFull ? lastMedFull.split(',')[0] : null
-                      const isBusy = busyPolicy === p.address
-
-                      return (
-                        <article key={p.address} className="person-card">
-                          <div className="person-head">
-                            <span className={p.paused ? 'avatar avatar-warn' : 'avatar'}>
-                              {person?.name ? initials(person.name) : <Icon name="pill" />}
-                            </span>
-                            <div>
-                              <span className="person-name">
-                                {personTitle(person) ?? 'Sin nombre'}
-                              </span>
-                              <span className="mono">Política {shortAddress(p.address)}</span>
-                            </div>
-                            <span className={p.paused ? 'tag tag-warn' : 'tag tag-ok'}>
-                              {p.paused ? 'En pausa' : 'Activa'}
-                            </span>
-                          </div>
-
-                          <dl className="facts">
-                            <div>
-                              <dt>Gastado {periodNow(p.periodSeconds)}</dt>
-                              <dd>
-                                {pesos(period.spent)} de {pesos(p.periodBudget)}
-                              </dd>
-                            </div>
-                          </dl>
-                          <div
-                            className="bar bar-sm"
-                            role="progressbar"
-                            aria-label="Presupuesto usado"
-                            aria-valuemin={0}
-                            aria-valuemax={p.periodBudget}
-                            aria-valuenow={period.spent}
-                          >
-                            <div className="bar-fill" style={{ width: `${percent}%` }} />
-                          </div>
-                          <dl className="facts">
-                            <div>
-                              <dt>Fondos disponibles</dt>
-                              <dd>{pesos(p.availablePesos)}</dd>
-                            </div>
-                            <div>
-                              <dt>Última compra</dt>
-                              <dd>
-                                {lastPurchase && lastMedShort ? (
-                                  `${lastMedShort} · ${pesos(lastPurchase.amount)}`
-                                ) : (
-                                  <span className="muted">Todavía ninguna</span>
-                                )}
-                              </dd>
-                            </div>
-                          </dl>
-
-                          <div className="card-links">
-                            <button
-                              type="button"
-                              className="link-button"
-                              onClick={() => handleCopyLink(p.address)}
-                            >
-                              {copiedPolicy === p.address
-                                ? 'Enlace copiado'
-                                : person?.name
-                                  ? `Copiar enlace de ${person.name}`
-                                  : 'Copiar enlace de la persona mayor'}
-                            </button>
-                            <a href={`/ver/${p.address}`}>Ver detalle</a>
+                  return (
+                    <>
+                      <div className="fam-head">
+                        <div>
+                          <h2>{personTitle(person) ?? 'Sin nombre'}</h2>
+                          <div className="title-line">
+                            <span className="mono">Política {shortAddress(p.address)}</span>
                             <button
                               type="button"
                               className="link-button"
@@ -528,106 +567,43 @@ export function Family() {
                               Cambiar nombre
                             </button>
                           </div>
+                        </div>
+                        <div className="title-line">
+                          <button
+                            type="button"
+                            className="btn btn-primary"
+                            onClick={() => handleCopyLink(p.address)}
+                          >
+                            {copiedPolicy === p.address ? 'Enlace copiado' : 'Copiar su enlace'}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn"
+                            disabled={isBusy}
+                            onClick={() => handleTogglePause(p)}
+                          >
+                            {p.paused ? 'Reanudar' : 'Pausar'}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-danger"
+                            disabled={isBusy}
+                            onClick={() => handleClose(p)}
+                          >
+                            Cerrar
+                          </button>
+                        </div>
+                      </div>
 
-                          {editingPolicy === p.address && (
-                            <div className="section">
-                              <div className="grid-2">
-                                <label className="field">
-                                  <span className="field-label">Nombre</span>
-                                  <input
-                                    className="input"
-                                    value={editName}
-                                    onChange={(e) => setEditName(e.target.value)}
-                                  />
-                                </label>
-                                <label className="field">
-                                  <span className="field-label">
-                                    Relación <small>(opcional)</small>
-                                  </span>
-                                  <input
-                                    className="input"
-                                    value={editRelation}
-                                    onChange={(e) => setEditRelation(e.target.value)}
-                                  />
-                                </label>
-                              </div>
-                              <div className="btn-row">
-                                <button
-                                  type="button"
-                                  className="btn btn-primary"
-                                  onClick={() => saveEditName(p.address)}
-                                >
-                                  Guardar
-                                </button>
-                                <button
-                                  type="button"
-                                  className="btn"
-                                  onClick={() => setEditingPolicy(null)}
-                                >
-                                  Cancelar
-                                </button>
-                              </div>
-                            </div>
-                          )}
-
-                          {cardError[p.address] && (
-                            <p className="error">{cardError[p.address]}</p>
-                          )}
-
-                          <div className="btn-row">
-                            <button
-                              type="button"
-                              className={p.paused ? 'btn btn-primary' : 'btn'}
-                              disabled={isBusy}
-                              onClick={() => handleTogglePause(p)}
-                            >
-                              {p.paused ? 'Reanudar' : 'Pausar'}
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-danger"
-                              disabled={isBusy}
-                              onClick={() => handleClose(p)}
-                            >
-                              Cerrar
-                            </button>
-                          </div>
-                        </article>
-                      )
-                    })}
-
-                    <a className="add-card" href="#crear">
-                      <span>
-                        <Icon name="plus" size={24} />
-                      </span>
-                      <span>
-                        <strong>Agregar a otra persona</strong>
-                      </span>
-                    </a>
-                  </div>
-                </section>
-
-                <section className="section" id="crear">
-                  <h2>Nueva política</h2>
-                  <div className="split">
-                    <form className="form-card split-main" onSubmit={handleSubmit}>
-                      <div className="step">
-                        <span className="step-num">1</span>
-                        <div className="step-body">
-                          <div className="step-head">
-                            <h3>¿Para quién es?</h3>
-                            <p>
-                              Así reconoces la política. La persona no necesita cuenta ni
-                              contraseña: usa un enlace.
-                            </p>
-                          </div>
+                      {editingPolicy === p.address && (
+                        <div className="section">
                           <div className="grid-2">
                             <label className="field">
                               <span className="field-label">Nombre</span>
                               <input
                                 className="input"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
                               />
                             </label>
                             <label className="field">
@@ -636,218 +612,354 @@ export function Family() {
                               </span>
                               <input
                                 className="input"
-                                value={relation}
-                                onChange={(e) => setRelation(e.target.value)}
+                                value={editRelation}
+                                onChange={(e) => setEditRelation(e.target.value)}
                               />
                             </label>
                           </div>
+                          <div className="btn-row">
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              onClick={() => saveEditName(p.address)}
+                            >
+                              Guardar
+                            </button>
+                            <button
+                              type="button"
+                              className="btn"
+                              onClick={() => setEditingPolicy(null)}
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {cardError[p.address] && <p className="error">{cardError[p.address]}</p>}
+
+                      <div className="fam-stats">
+                        <div className="fam-stat">
+                          <span>Gastado {periodNow(p.periodSeconds)}</span>
+                          <strong>{pesos(period.spent)}</strong>
+                          <span>de {pesos(p.periodBudget)}</span>
+                        </div>
+                        <div className="fam-stat fam-stat-ok">
+                          <span>Ahorro estimado</span>
+                          <strong>{pesos(policySavings.total)}</strong>
+                          <span>
+                            {policySavings.counted === 0
+                              ? 'todavía sin comparar'
+                              : `en ${policySavings.counted} ${policySavings.counted === 1 ? 'compra' : 'compras'}`}
+                          </span>
+                        </div>
+                        <div className="fam-stat">
+                          <span>Fondos</span>
+                          <strong>{pesos(p.availablePesos)}</strong>
+                          <span>disponibles</span>
+                        </div>
+                        <div className="fam-stat">
+                          <span>Se renueva</span>
+                          <strong>{renewText}</strong>
+                          <span>cada {periodLabel(p.periodSeconds)}</span>
                         </div>
                       </div>
 
-                      <div className="step">
-                        <span className="step-num">2</span>
-                        <div className="step-body">
-                          <div className="step-head">
-                            <h3>Límites de gasto</h3>
-                            <p>El programa rechaza cualquier compra que los pase.</p>
-                          </div>
-
-                          <fieldset>
-                            <legend>Cada cuánto se renueva el presupuesto</legend>
-                            <div className="segmented">
-                              {PERIOD_OPTIONS.map((opt) => (
-                                <label key={opt.seconds}>
-                                  <input
-                                    type="radio"
-                                    name="period"
-                                    className="visually-hidden"
-                                    checked={periodSeconds === opt.seconds}
-                                    onChange={() => setPeriodSeconds(opt.seconds)}
-                                  />
-                                  {opt.label}
-                                </label>
-                              ))}
-                            </div>
-                          </fieldset>
-
-                          <div className="grid-3">
-                            <label className="field">
-                              <span className="field-label">Tope por compra</span>
-                              <span className="money">
-                                <span>$</span>
-                                <input
-                                  inputMode="numeric"
-                                  value={capText}
-                                  onChange={(e) => setCapText(e.target.value)}
-                                  onBlur={() => formatMoneyOnBlur(capText, setCapText)}
-                                />
-                              </span>
-                              <span className="field-help">Máximo en una sola compra</span>
-                            </label>
-
-                            <label className="field">
-                              <span className="field-label">Presupuesto</span>
-                              <span className="money">
-                                <span>$</span>
-                                <input
-                                  inputMode="numeric"
-                                  value={budgetText}
-                                  onChange={(e) => setBudgetText(e.target.value)}
-                                  onBlur={() => formatMoneyOnBlur(budgetText, setBudgetText)}
-                                />
-                              </span>
-                              <span className="field-help">
-                                Máximo cada {periodLabel(periodSeconds)}
-                              </span>
-                            </label>
-
-                            <label className="field">
-                              <span className="field-label">Depósito inicial</span>
-                              <span className="money">
-                                <span>$</span>
-                                <input
-                                  inputMode="numeric"
-                                  value={depositText}
-                                  onChange={(e) => setDepositText(e.target.value)}
-                                  onBlur={() => formatMoneyOnBlur(depositText, setDepositText)}
-                                />
-                              </span>
-                              <span className="field-help">
-                                Son {formatSolFromPesos(depositPesos)} SOL de prueba
-                              </span>
-                            </label>
-                          </div>
-                        </div>
+                      <div className="section">
+                        <h3>Compras recientes</h3>
+                        {purchases.length === 0 ? (
+                          <p className="muted">Todavía no hay compras.</p>
+                        ) : (
+                          <ul className="fam-buys">
+                            {purchases.map((row, idx) => {
+                              const saved = policySavings.perPurchase[idx] ?? null
+                              return (
+                                <li key={`${row.timestamp}-${idx}`}>
+                                  <div>
+                                    <strong>
+                                      {productShortLabel(p.allProductSlots[row.productIndex] ?? '')}
+                                    </strong>
+                                    <div>
+                                      <span className="muted">
+                                        {pharmacyLabel(p.allPharmacySlots[row.pharmacyIndex] ?? '')}{' '}
+                                        · {dateTime(row.timestamp)}
+                                      </span>
+                                      {saved !== null && (
+                                        <span className="ok-text"> · ahorró {pesos(saved)}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <span>{pesos(row.amount)}</span>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        )}
+                        <a href={`/ver/${p.address}`}>Ver todas las compras y el detalle</a>
                       </div>
 
-                      <div className="step">
-                        <span className="step-num">3</span>
-                        <div className="step-body">
-                          <div className="step-head">
-                            <h3>Farmacias</h3>
-                            <span className="count">{pharmacyWallets.length} de 3 máximo</span>
-                          </div>
-                          {noPharmaciesConfigured ? (
-                            <p className="error">
-                              Las farmacias todavía no tienen cuenta de pago configurada.
-                            </p>
-                          ) : (
-                            <MultiPicker
-                              label="Farmacias"
-                              chipsLabel="Farmacias elegidas"
-                              placeholder="Busca una farmacia"
-                              fullText="Llegaste al máximo. Quita una para elegir otra."
-                              items={pharmacyItems}
-                              selected={pharmacyWallets}
-                              max={3}
-                              onChange={setPharmacyWallets}
-                            />
-                          )}
-                        </div>
+                      <div className="section">
+                        <h3>Sus reglas</h3>
+                        <p className="muted">
+                          Hasta <strong>{pesos(p.perPurchaseCap)}</strong> por compra, solo en estas
+                          farmacias y remedios:
+                        </p>
+                        <ul className="chips">
+                          {p.pharmacies.map((addr) => (
+                            <li key={addr} className="chip">
+                              {pharmacyLabel(addr)}
+                            </li>
+                          ))}
+                          {p.productHashes.map((hash) => (
+                            <li key={hash} className="chip chip-neutral">
+                              {productShortLabel(hash)}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
+                    </>
+                  )
+                })()
+              ) : (
+                <>
+                  <h2>Cuidar a otra persona</h2>
 
-                      <div className="step">
-                        <span className="step-num">4</span>
-                        <div className="step-body">
-                          <div className="step-head">
-                            <h3>Medicamentos</h3>
-                            <span className="count">{productIds.length} de 10 máximo</span>
-                          </div>
-                          <MultiPicker
-                            label="Medicamentos"
-                            chipsLabel="Medicamentos elegidos"
-                            placeholder="Busca por nombre o principio activo"
-                            fullText="Llegaste al máximo. Quita uno para elegir otro."
-                            items={productItems}
-                            selected={productIds}
-                            max={10}
-                            onChange={setProductIds}
-                          />
-                        </div>
-                      </div>
-
-                      {missingAgent && (
-                        <div className="step">
-                          <p className="error">
-                            Falta configurar la cuenta de prueba para conocer al asistente.
+                  <form className="form-card" onSubmit={handleSubmit}>
+                    <div className="step">
+                      <span className="step-num">1</span>
+                      <div className="step-body">
+                        <div className="step-head">
+                          <h3>¿Para quién es?</h3>
+                          <p>
+                            Así reconoces la política. La persona no necesita cuenta ni contraseña:
+                            usa un enlace.
                           </p>
                         </div>
-                      )}
-
-                      {formError && (
-                        <div className="step">
-                          <p className="error">{formError}</p>
-                        </div>
-                      )}
-
-                      {createdPolicy && (
-                        <div className="step">
-                          <div className="notice">
-                            <Icon name="check" />
-                            <span>
-                              Política creada.{' '}
-                              <a href={`/p/${createdPolicy}`}>
-                                Abrir la página de la persona mayor
-                              </a>{' '}
-                              · <a href={`/ver/${createdPolicy}`}>Ver límites y compras</a>
+                        <div className="grid-2">
+                          <label className="field">
+                            <span className="field-label">Nombre</span>
+                            <input
+                              className="input"
+                              value={name}
+                              onChange={(e) => setName(e.target.value)}
+                            />
+                          </label>
+                          <label className="field">
+                            <span className="field-label">
+                              Relación <small>(opcional)</small>
                             </span>
-                          </div>
+                            <input
+                              className="input"
+                              value={relation}
+                              onChange={(e) => setRelation(e.target.value)}
+                            />
+                          </label>
                         </div>
-                      )}
-
-                      <div className="form-foot">
-                        <p>
-                          Phantom te pedirá firmar. Después no se puede editar: solo pausar o
-                          cerrar.
-                        </p>
-                        <button
-                          type="submit"
-                          className="btn btn-primary btn-lg"
-                          disabled={!canCreate}
-                        >
-                          {submitting
-                            ? 'Creando…'
-                            : trimmedName
-                              ? `Crear la política de ${trimmedName}`
-                              : 'Crear la política'}
-                        </button>
                       </div>
-                    </form>
+                    </div>
 
-                    <aside className="summary" aria-label="Resumen">
-                      <span className="eyebrow">Resumen</span>
-                      <p className="summary-text">
-                        {trimmedName || 'La persona'} podrá comprar hasta{' '}
-                        <strong>{pesos(capPesos)}</strong> por vez y{' '}
-                        <strong>{pesos(budgetPesos)}</strong> cada {periodLabel(periodSeconds)},
-                        solo <strong>{pharmacyCountText}</strong> y solo{' '}
-                        <strong>{productCountText}</strong>.
+                    <div className="step">
+                      <span className="step-num">2</span>
+                      <div className="step-body">
+                        <div className="step-head">
+                          <h3>Límites de gasto</h3>
+                          <p>El programa rechaza cualquier compra que los pase.</p>
+                        </div>
+
+                        <fieldset>
+                          <legend>Cada cuánto se renueva el presupuesto</legend>
+                          <div className="segmented">
+                            {PERIOD_OPTIONS.map((opt) => (
+                              <label key={opt.seconds}>
+                                <input
+                                  type="radio"
+                                  name="period"
+                                  className="visually-hidden"
+                                  checked={periodSeconds === opt.seconds}
+                                  onChange={() => setPeriodSeconds(opt.seconds)}
+                                />
+                                {opt.label}
+                              </label>
+                            ))}
+                          </div>
+                        </fieldset>
+
+                        <div className="grid-3">
+                          <label className="field">
+                            <span className="field-label">Tope por compra</span>
+                            <span className="money">
+                              <span>$</span>
+                              <input
+                                inputMode="numeric"
+                                value={capText}
+                                onChange={(e) => setCapText(e.target.value)}
+                                onBlur={() => formatMoneyOnBlur(capText, setCapText)}
+                              />
+                            </span>
+                            <span className="field-help">Máximo en una sola compra</span>
+                          </label>
+
+                          <label className="field">
+                            <span className="field-label">Presupuesto</span>
+                            <span className="money">
+                              <span>$</span>
+                              <input
+                                inputMode="numeric"
+                                value={budgetText}
+                                onChange={(e) => setBudgetText(e.target.value)}
+                                onBlur={() => formatMoneyOnBlur(budgetText, setBudgetText)}
+                              />
+                            </span>
+                            <span className="field-help">
+                              Máximo cada {periodLabel(periodSeconds)}
+                            </span>
+                          </label>
+
+                          <label className="field">
+                            <span className="field-label">Depósito inicial</span>
+                            <span className="money">
+                              <span>$</span>
+                              <input
+                                inputMode="numeric"
+                                value={depositText}
+                                onChange={(e) => setDepositText(e.target.value)}
+                                onBlur={() => formatMoneyOnBlur(depositText, setDepositText)}
+                              />
+                            </span>
+                            <span className="field-help">
+                              Son {formatSolFromPesos(depositPesos)} SOL de prueba
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="step">
+                      <span className="step-num">3</span>
+                      <div className="step-body">
+                        <div className="step-head">
+                          <h3>Farmacias</h3>
+                          <span className="count">{pharmacyWallets.length} de 3 máximo</span>
+                        </div>
+                        {noPharmaciesConfigured ? (
+                          <p className="error">
+                            Las farmacias todavía no tienen cuenta de pago configurada.
+                          </p>
+                        ) : (
+                          <MultiPicker
+                            label="Farmacias"
+                            chipsLabel="Farmacias elegidas"
+                            placeholder="Busca una farmacia"
+                            fullText="Llegaste al máximo. Quita una para elegir otra."
+                            items={pharmacyItems}
+                            selected={pharmacyWallets}
+                            max={3}
+                            onChange={setPharmacyWallets}
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="step">
+                      <span className="step-num">4</span>
+                      <div className="step-body">
+                        <div className="step-head">
+                          <h3>Medicamentos</h3>
+                          <span className="count">{productIds.length} de 10 máximo</span>
+                        </div>
+                        <MultiPicker
+                          label="Medicamentos"
+                          chipsLabel="Medicamentos elegidos"
+                          placeholder="Busca por nombre o principio activo"
+                          fullText="Llegaste al máximo. Quita uno para elegir otro."
+                          items={productItems}
+                          selected={productIds}
+                          max={10}
+                          onChange={setProductIds}
+                        />
+                      </div>
+                    </div>
+
+                    {missingAgent && (
+                      <div className="step">
+                        <p className="error">
+                          Falta configurar la cuenta de prueba para conocer al asistente.
+                        </p>
+                      </div>
+                    )}
+
+                    {formError && (
+                      <div className="step">
+                        <p className="error">{formError}</p>
+                      </div>
+                    )}
+
+                    {createdPolicy && (
+                      <div className="step">
+                        <div className="notice">
+                          <Icon name="check" />
+                          <span>
+                            Política creada.{' '}
+                            <a href={`/p/${createdPolicy}`}>
+                              Abrir la página de la persona mayor
+                            </a>{' '}
+                            · <a href={`/ver/${createdPolicy}`}>Ver límites y compras</a>
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="form-foot">
+                      <p>
+                        Phantom te pedirá firmar. Después no se puede editar: solo pausar o cerrar.
                       </p>
-                      <dl className="summary-rows">
-                        <div>
-                          <dt>Depósito</dt>
-                          <dd>{pesos(depositPesos)}</dd>
-                        </div>
-                        <div>
-                          <dt>Renta de la cuenta</dt>
-                          <dd>{POLICY_RENT_TEXT}</dd>
-                        </div>
-                        <div>
-                          <dt>Al cerrar</dt>
-                          <dd>Todo vuelve a ti</dd>
-                        </div>
-                      </dl>
-                      <p className="summary-note">
-                        <Icon name="shield" />
-                        Aunque alguien engañe al asistente, el programa no deja pagar fuera de estas
-                        reglas.
-                      </p>
-                    </aside>
-                  </div>
-                </section>
-              </>
-            )}
-          </>
+                      <button
+                        type="submit"
+                        className="btn btn-primary btn-lg"
+                        disabled={!canCreate}
+                      >
+                        {submitting
+                          ? 'Creando…'
+                          : trimmedName
+                            ? `Crear la política de ${trimmedName}`
+                            : 'Crear la política'}
+                      </button>
+                    </div>
+                  </form>
+
+                  <aside className="summary" aria-label="Resumen">
+                    <span className="eyebrow">Resumen</span>
+                    <p className="summary-text">
+                      {trimmedName || 'La persona'} podrá comprar hasta{' '}
+                      <strong>{pesos(capPesos)}</strong> por vez y{' '}
+                      <strong>{pesos(budgetPesos)}</strong> cada {periodLabel(periodSeconds)}, solo{' '}
+                      <strong>{pharmacyCountText}</strong> y solo{' '}
+                      <strong>{productCountText}</strong>.
+                    </p>
+                    <dl className="summary-rows">
+                      <div>
+                        <dt>Depósito</dt>
+                        <dd>{pesos(depositPesos)}</dd>
+                      </div>
+                      <div>
+                        <dt>Renta de la cuenta</dt>
+                        <dd>{POLICY_RENT_TEXT}</dd>
+                      </div>
+                      <div>
+                        <dt>Al cerrar</dt>
+                        <dd>Todo vuelve a ti</dd>
+                      </div>
+                    </dl>
+                    <p className="summary-note">
+                      <Icon name="shield" />
+                      Aunque alguien engañe al asistente, el programa no deja pagar fuera de estas
+                      reglas.
+                    </p>
+                  </aside>
+                </>
+              )}
+            </section>
+          </div>
         )}
       </main>
     </>

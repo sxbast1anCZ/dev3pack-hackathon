@@ -6,14 +6,17 @@ import { loadCatalog, type Catalog } from '../lib/catalog'
 import { dateTime, explorerAddressUrl, periodLabel, pesos, shortAddress } from '../lib/format'
 import { readPolicy, type PolicySummary } from '../lib/policy'
 import { periodState, recentPurchases } from '../lib/policyMath'
+import { estimateSavings } from '../lib/savings'
 
 const EMPTY_CATALOG: Catalog = {
   productNameByHash: new Map(),
+  productIdByHash: new Map(),
   productNameById: new Map(),
   pharmacyByWallet: new Map(),
   pharmacyNameById: new Map(),
   products: [],
   pharmacies: [],
+  prices: [],
 }
 
 type LoadState =
@@ -143,6 +146,15 @@ export function PolicyView({ policy }: { policy: string }) {
   const percent =
     data.periodBudget > 0 ? Math.min(100, (period.spent / data.periodBudget) * 100) : 0
   const purchases = recentPurchases(data.history, data.purchaseCount)
+  const savings = estimateSavings({
+    purchases: purchases.map((row) => ({
+      amount: row.amount,
+      productId: catalog.productIdByHash.get(data.allProductSlots[row.productIndex] ?? '') ?? null,
+      pharmacyId:
+        catalog.pharmacyByWallet.get(data.allPharmacySlots[row.pharmacyIndex] ?? '')?.id ?? null,
+    })),
+    prices: catalog.prices,
+  })
 
   const pharmacyLabel = (address: string) =>
     catalog.pharmacyByWallet.get(address)?.name ?? `Farmacia ${shortAddress(address)}`
@@ -197,6 +209,17 @@ export function PolicyView({ policy }: { policy: string }) {
           </div>
         </section>
 
+        {savings.counted > 0 && (
+          <section className="card card-lg fam-stat-ok" aria-label="Ahorro estimado">
+            <span className="label">Ahorro estimado</span>
+            <span className="big-number">{pesos(savings.total)}</span>
+            <p className="muted">
+              en {savings.counted} {savings.counted === 1 ? 'compra' : 'compras'}, con los precios
+              de hoy, contra la siguiente farmacia más barata con stock.
+            </p>
+          </section>
+        )}
+
         <div className="stat-grid">
           <div className="card">
             <span className="label">Tope por compra</span>
@@ -246,30 +269,46 @@ export function PolicyView({ policy }: { policy: string }) {
           {purchases.length === 0 ? (
             <p className="muted">Todavía no hay compras</p>
           ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Medicamento</th>
-                    <th>Farmacia</th>
-                    <th className="num">Monto</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {purchases.map((row, idx) => (
-                    <tr key={`${row.timestamp}-${idx}`}>
-                      <td className="muted">{dateTime(row.timestamp)}</td>
-                      <td>
-                        <strong>{productLabel(data.allProductSlots[row.productIndex] ?? '')}</strong>
-                      </td>
-                      <td>{pharmacyLabel(data.allPharmacySlots[row.pharmacyIndex] ?? '')}</td>
-                      <td className="num">{pesos(row.amount)}</td>
+            <>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Medicamento</th>
+                      <th>Farmacia</th>
+                      <th className="num">Monto</th>
+                      <th className="num">Ahorro</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {purchases.map((row, idx) => {
+                      const saved = savings.perPurchase[idx]
+                      return (
+                        <tr key={`${row.timestamp}-${idx}`}>
+                          <td className="muted">{dateTime(row.timestamp)}</td>
+                          <td>
+                            <strong>
+                              {productLabel(data.allProductSlots[row.productIndex] ?? '')}
+                            </strong>
+                          </td>
+                          <td>{pharmacyLabel(data.allPharmacySlots[row.pharmacyIndex] ?? '')}</td>
+                          <td className="num">{pesos(row.amount)}</td>
+                          <td className="num">
+                            {saved !== null ? (
+                              <span className="ok-text">{pesos(saved)}</span>
+                            ) : (
+                              '—'
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <p className="muted">—: no había otra farmacia con stock para comparar.</p>
+            </>
           )}
         </section>
 

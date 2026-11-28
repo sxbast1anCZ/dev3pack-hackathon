@@ -85,7 +85,9 @@ the dynamic variable `policy` set to that address (`VITE_ELEVENLABS_AGENT_ID` in
 person can confirm by voice or with the Sí / No buttons, which send the same word to the agent.
 
 The family screen is at `/familia`. It connects Phantom on devnet, creates a policy, pauses it and
-closes it. The person's name is kept only in the browser (`localStorage`).
+closes it. The person's name is kept only in the browser (`localStorage`). The family screen shows
+a list of the people you care for and the details of one at a time, with an estimated saving
+computed from today's prices.
 
 Guest mode is at `/invitado` and uses `VITE_GUEST_POLICY`.
 
