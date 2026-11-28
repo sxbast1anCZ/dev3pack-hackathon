@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import {
   isPharmacyId,
   QUOTE_TTL_SECONDS,
@@ -7,9 +6,11 @@ import {
 } from '../_lib/contract.js'
 import { agentTool, isObject, nonEmptyString, type Validator } from '../_lib/http.js'
 import { findMockProductById } from '../_lib/mock-catalog.js'
+import { now, quoteStore } from '../_lib/quotes.js'
 
 // POST /api/tools/propose-purchase. Agent tool propose_purchase (docs/contracts.md, section 2).
-// Card A2: simulated. Card A3 stores the quote; card A5 reads the policy from the chain.
+// Prices are simulated until card A6. The quote is stored (card A3). Card A5 reads the policy
+// from the chain to set within_policy.
 
 const validate: Validator<ProposePurchaseRequest> = (body) => {
   if (!isObject(body)) return { ok: false, error: 'body must be an object' }
@@ -27,9 +28,16 @@ export async function proposePurchase(body: ProposePurchaseRequest): Promise<Pro
   if (!offer) return { ok: false, reason: 'PRICE_UNAVAILABLE' }
   if (!offer.in_stock) return { ok: false, reason: 'OUT_OF_STOCK' }
 
+  const at = now()
+  const readAt = new Date(at.getTime() - offer.read_minutes_ago * 60_000).toISOString()
+  const quote = await quoteStore().create(
+    { policy: body.policy, product_id: entry.product.id, pharmacy: offer.pharmacy, price: offer.price, read_at: readAt },
+    at,
+  )
+
   return {
     ok: true,
-    quote_id: randomUUID(),
+    quote_id: quote.id,
     product_id: entry.product.id,
     pharmacy: offer.pharmacy,
     price: offer.price,
