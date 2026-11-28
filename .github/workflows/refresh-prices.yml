@@ -1,0 +1,40 @@
+name: Refresh prices
+
+# Re-reads the catalog prices with Firecrawl and stores them in Supabase.
+# A scheduled workflow only runs from the default branch (main).
+#
+# Budget: one full run is 28 Firecrawl credits and the account has about 1,000. Every six hours is
+# 112 credits a day. Do not make this more frequent without checking the credits left.
+
+on:
+  schedule:
+    - cron: '17 */6 * * *' # 00:17, 06:17, 12:17, 18:17 UTC
+  workflow_dispatch:
+    inputs:
+      product:
+        description: 'Product id to read (empty: the whole catalog)'
+        required: false
+        default: ''
+
+concurrency:
+  group: refresh-prices
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # Exits 1 if any reading was rejected: a failed run is the alert. Rejected readings are not
+      # stored, so the last good price stays.
+      - name: Read prices
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          PRODUCT: ${{ inputs.product }}
+        run: node data/refresh-prices.mjs $PRODUCT

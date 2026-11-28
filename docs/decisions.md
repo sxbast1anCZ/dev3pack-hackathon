@@ -169,3 +169,23 @@ for families. Our own SPL token is the first improvement if time is left.
 **State:** Agreed. **Who:** Ruben. Confirms "Payments settle in devnet SOL at a fixed rate".
 
 The program pays in devnet SOL with `LAMPORTS_PER_PESO = 1_000`. No SPL token in the first flow.
+
+## 2026-11-27. How prices are read and refreshed
+
+**State:** Proposed by the agent while building the `data` lane. Sebastián confirms by merging.
+
+- **Fixed parsers, not model extraction.** Firecrawl returns each product page as markdown and one
+  parser per chain reads it. A first version used Firecrawl's JSON extraction with a model: on the
+  same three pages it got one price and two stock values wrong. Parsers also cost 1 credit a page
+  instead of 5.
+- **The schedule is a GitHub Actions workflow**, `.github/workflows/refresh-prices.yml`, not a
+  Vercel cron or a Supabase function: no new service, the logs are public, and a failed run is the
+  alert. It only runs once the workflow file is on `main`.
+- **Every six hours.** One full run is 28 Firecrawl credits and the account has about 1,000. Six
+  hours is 112 credits a day, which lasts through the judging days. The voice agent says how old a
+  price is.
+- **On demand:** the `agent` lane can import `refresh('<id>')` from `data/refresh-prices.mjs` to
+  re-read one product (3 credits, up to 20 seconds). Use it only when a price is older than 12
+  hours, as a fallback when the schedule fails.
+- **A price that moves more than 60% is never stored automatically.** To accept it, a person
+  deletes the stored row and runs the workflow by hand.

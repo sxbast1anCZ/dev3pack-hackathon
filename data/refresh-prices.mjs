@@ -5,6 +5,9 @@
 //   node --env-file=.env data/refresh-prices.mjs <id>       one product
 //   node data/refresh-prices.mjs --self-test                check parsers and rules, no network
 //
+// Other lanes import it: import { refresh } from '../data/refresh-prices.mjs', then refresh('<id>').
+// The schedule is .github/workflows/refresh-prices.yml.
+//
 // Firecrawl returns the page as markdown; one fixed parser per chain reads it. No model guesses
 // which number is the price. A reading that is empty, about another product, or far from the last
 // stored price is reported and NOT written: a broken page must never erase a good price.
@@ -13,8 +16,9 @@
 // Price rule (docs/contracts.md): what any person pays online, without a club or an agreement.
 // Stock is what the page shows to a visitor from Chile who has not chosen a commune.
 
-import { readFile } from 'node:fs/promises'
+import { pathToFileURL } from 'node:url'
 import assert from 'node:assert/strict'
+import catalog from './catalog.json' with { type: 'json' }
 
 const MIN_PRICE = 100
 const MAX_PRICE = 500_000
@@ -131,13 +135,13 @@ function selfTest() {
 
 function env(name) {
   const value = process.env[name]
-  if (!value) throw new Error(`Missing environment variable ${name}. Run with: node --env-file=.env ...`)
+  if (!value) throw new Error(`Missing environment variable ${name}. As a command: node --env-file=.env data/refresh-prices.mjs`)
   return value
 }
 
 async function supabase(path, { method = 'GET', body, prefer } = {}) {
   const key = env('SUPABASE_SERVICE_ROLE_KEY')
-  const res = await fetch(`${env('SUPABASE_URL')}/rest/v1/${path}`, {
+  const res = await fetch(`${env('SUPABASE_URL').replace(/\/+$/, '')}/rest/v1/${path}`, {
     method,
     headers: {
       apikey: key,
@@ -176,6 +180,7 @@ async function readPage(url, pharmacy) {
       timeout: 60000,
       location: { country: 'CL', languages: ['es'] }, // stock and offers depend on the visitor's country
     }),
+    signal: AbortSignal.timeout(90_000), // one page must never hang a whole run
   })
   const payload = await res.json().catch(() => null)
   if (!res.ok || !payload?.success) throw new Error(`Firecrawl ${res.status}: ${JSON.stringify(payload)?.slice(0, 300)}`)
@@ -184,9 +189,13 @@ async function readPage(url, pharmacy) {
   return { reading: PARSERS[pharmacy](md), credits: payload.data?.metadata?.creditsUsed }
 }
 
-async function main() {
-  const only = process.argv[2]
-  const catalog = JSON.parse(await readFile(new URL('./catalog.json', import.meta.url), 'utf8'))
+/**
+ * Reads every catalog product, or only the one with id `only`, and stores each reading that passes
+ * the rules. Returns one result per page: { product, pharmacy, ok, price?, in_stock?, reason? }.
+ * A page costs one Firecrawl credit and takes 7 to 20 seconds: never call this inside a voice turn
+ * for more than one product.
+ */
+export async function refresh(only) {
   const products = catalog.products.filter((p) => !only || p.id === only)
   if (products.length === 0) throw new Error(`No product "${only}" in data/catalog.json`)
   for (const p of products) {
@@ -208,35 +217,45 @@ async function main() {
   const lastPrice = (id, pharmacy) => stored.find((r) => r.product_id === id && r.pharmacy === pharmacy)?.price ?? null
 
   const jobs = products.flatMap((p) => Object.entries(p.sources).map(([pharmacy, url]) => ({ product: p, pharmacy, url })))
-  const results = await inBatches(jobs, CONCURRENCY, async ({ product, pharmacy, url }) => {
-      const started = Date.now()
-      const seconds = () => ((Date.now() - started) / 1000).toFixed(1)
+  return inBatches(jobs, CONCURRENCY, async ({ product, pharmacy, url }) => {
+    const started = Date.now()
+    const base = { product: product.id, pharmacy }
+    const seconds = () => ((Date.now() - started) / 1000).toFixed(1)
+    let failure
+    // A page sometimes comes back half rendered, or Firecrawl fails once: try twice, then report.
+    for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        // A page sometimes comes back half rendered. One second try, then give up and report.
-        let { reading, credits } = await readPage(url, pharmacy)
-        let reason = rejectReason(reading, product, lastPrice(product.id, pharmacy))
-        if (reason) {
-          ;({ reading, credits } = await readPage(url, pharmacy))
-          reason = rejectReason(reading, product, lastPrice(product.id, pharmacy))
+        const { reading, credits } = await readPage(url, pharmacy)
+        const reason = rejectReason(reading, product, lastPrice(product.id, pharmacy))
+        if (!reason) {
+          await upsert('prices', 'product_id,pharmacy', [
+            { product_id: product.id, pharmacy, price: reading.price, in_stock: reading.in_stock, read_at: new Date().toISOString() },
+          ])
+          return { ...base, ok: true, price: reading.price, in_stock: reading.in_stock, seconds: seconds(), credits }
         }
-        if (reason) return { product: product.id, pharmacy, ok: false, reason, seconds: seconds(), credits }
-        await upsert('prices', 'product_id,pharmacy', [
-          { product_id: product.id, pharmacy, price: reading.price, in_stock: reading.in_stock, read_at: new Date().toISOString() },
-        ])
-        return { product: product.id, pharmacy, ok: true, price: reading.price, in_stock: reading.in_stock, name: reading.product_name, seconds: seconds(), credits }
+        failure = { reason, credits }
+        // ponytail: a big move is never accepted automatically. To accept one, delete the stored row.
+        if (reason.startsWith('price moved')) break
       } catch (error) {
-        return { product: product.id, pharmacy, ok: false, reason: error.message, seconds: seconds() }
+        failure = { reason: error.message }
       }
+    }
+    return { ...base, ok: false, seconds: seconds(), ...failure }
   })
-
-  console.table(results.map(({ reason, name, ...row }) => row))
-  const failed = results.filter((r) => !r.ok)
-  for (const f of failed) console.error(`REJECTED ${f.product} at ${f.pharmacy}: ${f.reason}`)
-  if (failed.length) {
-    console.error(`ALERT: ${failed.length} of ${results.length} readings were rejected and not stored.`)
-    process.exitCode = 1
-  }
 }
 
-if (process.argv[2] === '--self-test') selfTest()
-else await main()
+// Run as a command, not when another lane imports refresh().
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  if (process.argv[2] === '--self-test') {
+    selfTest()
+  } else {
+    const results = await refresh(process.argv[2])
+    console.table(results.map(({ reason, ...row }) => row))
+    const failed = results.filter((r) => !r.ok)
+    for (const f of failed) console.error(`REJECTED ${f.product} at ${f.pharmacy}: ${f.reason}`)
+    if (failed.length) {
+      console.error(`ALERT: ${failed.length} of ${results.length} readings were rejected and not stored.`)
+      process.exitCode = 1
+    }
+  }
+}
