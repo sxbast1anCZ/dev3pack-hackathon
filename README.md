@@ -51,6 +51,10 @@ Vercel CLI: `npx vercel dev`.
 | `app/` | The web app: Vite, React and TypeScript |
 | `api/` | Vercel functions. Files and folders whose name starts with `_` are not published as functions |
 
+The read-only view of a policy is at `/ver/<policy address>`. It reads the `Policy` account from
+devnet with the IDL, and the names of medicines and pharmacies from Supabase
+(`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` in `.env`).
+
 ### The program
 
 Needs Rust, the Solana CLI 3.1.10 and the Anchor CLI 1.2.2 (`docs/team-setup.md`).
