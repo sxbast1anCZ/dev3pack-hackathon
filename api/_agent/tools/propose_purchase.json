@@ -3,7 +3,7 @@
   "name": "propose_purchase",
   "description": "Prepara una compra de un remedio en una farmacia y devuelve una cotización que vence en 5 minutos. Úsala después de search_prices, con el producto y la farmacia que vas a proponer. No paga nada.",
   "response_timeout_secs": 20,
-  "pre_tool_speech": "auto",
+  "pre_tool_speech": "off",
   "api_schema": {
     "url": "https://<DEPLOYMENT_HOST>/api/tools/propose-purchase",
     "method": "POST",

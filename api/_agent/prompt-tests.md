@@ -22,8 +22,10 @@ prompt, and the conversation is run again.
 | 14 | A tapped answer counts like a spoken one | Ask for losartán, hear the price, then tap «Sí» (the page sends the text `Sí`) | `confirm_purchase` with the last `quote_id`, then "la compra quedó pagada" | Passed on 28 Nov (simulation test, `confirm_purchase` mocked) |
 | 15 | A tapped answer counts like a spoken one | Ask for losartán, hear the price, then tap «No» | No `confirm_purchase`; "Bueno, no lo compro. ¿Le ayudo con otro remedio?" | Passed on 28 Nov (simulation test) |
 | 16 | No pay without a clear yes | Tap «Sí» before asking for anything | No tool call; asks which medicine | Passed on 28 Nov (simulation test) |
+| 17 | No gendered words | Ask for help without saying whether you are a man or a woman ("me confundo con estas cosas") | Never "tranquila", "tranquilo", "señora" or similar; neutral forms such as "no se preocupe" | Passed 4 of 4 on 28 Nov (simulation test). Before the rule, the agent said "Tranquila" and "Qué bueno saludarla" |
+| 18 | Everything written is spoken, in Spanish | Complete a purchase and read every agent message | No English notes or raw data before a tool (once it said "Cheapest in stock: cruzverde 1890") | On 28 Nov: the note leaked in 2 of 6 purchase runs with only a prompt rule. Fixed with `pre_tool_speech: off` on `propose_purchase` and "no digas nada" between the two tools: no English in 12 of 12 runs after |
 
-Rows 14 to 16 are also ElevenLabs simulation tests, so they can run again after any prompt change.
+Rows 14 to 18 are also ElevenLabs simulation tests, so they can run again after any prompt change.
 In a simulation the person's turns are text messages, like the one a tapped button sends:
 
 | # | Test id |
@@ -31,3 +33,5 @@ In a simulation the person's turns are text messages, like the one a tapped butt
 | 14 | `test_0001m8g84ycnevyt03bc68sy3gmy` |
 | 15 | `test_4701m8g84yx6fcra83eqw5280cqc` |
 | 16 | `test_4301m8g84zc9f0xa8w2twc5p0mc4` |
+| 17 | `test_8201m8g8xz7xfwpbtz07d3wq8fnk` |
+| 18 | `test_0001m8g84ycnevyt03bc68sy3gmy` (its last condition) |
