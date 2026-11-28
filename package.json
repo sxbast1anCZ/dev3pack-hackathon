@@ -11,7 +11,8 @@
     "preview": "vite preview --config app/vite.config.ts",
     "typecheck": "tsc -p app && tsc -p api",
     "test": "node --import tsx --test \"api/_tests/**/*.test.ts\"",
-    "check:devnet": "tsx api/_scripts/devnet-check.ts"
+    "check:devnet": "tsx api/_scripts/devnet-check.ts",
+    "try:search": "node --env-file-if-exists=.env --import tsx api/_scripts/try-search.ts"
   },
   "dependencies": {
     "@anchor-lang/core": "^1.2.2",
