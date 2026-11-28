@@ -4,6 +4,7 @@ import type { ConfirmPurchaseResponse, ProposePurchaseResponse } from '../_lib/c
 import { setClock, type MemoryQuoteStore } from '../_lib/quotes.js'
 import { POST as confirm } from '../tools/confirm-purchase.js'
 import { POST as propose } from '../tools/propose-purchase.js'
+import { POLICY, withFakeChain } from './fake-chain.js'
 import { toolRequest, withMemoryQuotes, withSecret } from './helpers.js'
 
 let store: MemoryQuoteStore
@@ -11,6 +12,7 @@ let clock = new Date('2026-11-28T12:00:00.000Z')
 
 beforeEach(() => {
   store = withMemoryQuotes()
+  withFakeChain()
   clock = new Date('2026-11-28T12:00:00.000Z')
   setClock(() => clock)
 })
@@ -18,7 +20,7 @@ beforeEach(() => {
 afterEach(() => setClock(() => new Date()))
 
 async function newQuote(): Promise<string> {
-  const res = await propose(toolRequest({ policy: 'PolicyAddress111', product_id: 'losartan-50mg-30', pharmacy: 'salcobrand' }))
+  const res = await propose(toolRequest({ policy: POLICY, product_id: 'losartan-50mg-30', pharmacy: 'salcobrand' }))
   const out = (await res.json()) as ProposePurchaseResponse
   assert.ok(out.ok)
   return out.quote_id
@@ -85,7 +87,7 @@ test('without Supabase settings, propose fails with 500 instead of keeping quote
     const original = console.error
     console.error = () => {}
     try {
-      const res = await propose(toolRequest({ policy: 'PolicyAddress111', product_id: 'losartan-50mg-30', pharmacy: 'salcobrand' }))
+      const res = await propose(toolRequest({ policy: POLICY, product_id: 'losartan-50mg-30', pharmacy: 'salcobrand' }))
       assert.equal(res.status, 500)
     } finally {
       console.error = original

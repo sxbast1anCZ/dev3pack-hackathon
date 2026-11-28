@@ -1,6 +1,6 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { QUOTE_TTL_SECONDS, type PharmacyId } from './contract.js'
-import { requireEnv } from './env.js'
+import { serverDb } from './db.js'
 
 // Quotes (card A3): a quote is created by propose_purchase, expires after QUOTE_TTL_SECONDS, and
 // can be used once. confirm_purchase claims it before anything is sent, so it can never pay twice.
@@ -125,12 +125,7 @@ let store: QuoteStore | undefined
 // The store the tools use. Created on first use, so a deployment without Supabase settings fails
 // on the first call (500) instead of silently keeping quotes nowhere.
 export function quoteStore(): QuoteStore {
-  if (!store) {
-    const db = createClient(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'), {
-      auth: { persistSession: false, autoRefreshToken: false },
-    })
-    store = new SupabaseQuoteStore(db)
-  }
+  if (!store) store = new SupabaseQuoteStore(serverDb())
   return store
 }
 

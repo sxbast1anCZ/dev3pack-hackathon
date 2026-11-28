@@ -41,7 +41,7 @@ its tests, and try the main flow by hand.
 | Lane | Checks |
 | --- | --- |
 | `program` | `cd program && yarn install && yarn test:local` (builds SBPF v0, runs the tests on `solana-test-validator`) |
-| `agent` | `npm run typecheck`, `npm test` |
+| `agent` | `npm run typecheck`, `npm test`. Against devnet, with throwaway keys: `npm run check:devnet` |
 | `web` | `npm run typecheck`, `npm run build` |
 | `data` | `node data/refresh-prices.mjs --self-test`. To read real prices: `node --env-file=.env data/refresh-prices.mjs` |
 
