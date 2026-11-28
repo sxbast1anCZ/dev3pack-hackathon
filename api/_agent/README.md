@@ -17,8 +17,18 @@ Placeholders in the tool files:
 
 ## Create or update the agent
 
-The agent is published as `agent_2601m8fzhxyvfhqtp07wg45hsgkr` (the web app's `VITE_ELEVENLABS_AGENT_ID`). Its
-tools are attached once the API has a public URL.
+The agent is published as `agent_2601m8fzhxyvfhqtp07wg45hsgkr` (the web app's `VITE_ELEVENLABS_AGENT_ID`).
+Its three tools call `https://dev3pack-hackathon.vercel.app/api/tools/…` with the workspace secret
+`AGENT_TOOL_SECRET`:
+
+| Tool | ElevenLabs tool id |
+| --- | --- |
+| `search_prices` | `tool_5301m8g05xh8e9aa1p2pb62r5wzp` |
+| `propose_purchase` | `tool_8501m8g05yf4fr6t8w3jsfcdndgm` |
+| `confirm_purchase` | `tool_8301m8g05z7cergstvvj1gkw74yq` |
+
+`search_prices` and `propose_purchase` wait up to 20 seconds: a cold Vercel function that reads
+Supabase and Solana can take several seconds on its first call.
 
 
 1. Store `AGENT_TOOL_SECRET` as an ElevenLabs secret (dashboard: Agents, Secrets; or the API
