@@ -55,6 +55,9 @@ The read-only view of a policy is at `/ver/<policy address>`. It reads the `Poli
 devnet with the IDL, and the names of medicines and pharmacies from Supabase
 (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` in `.env`).
 
+The older person's page is at `/p/<policy address>`. It starts the ElevenLabs conversation with
+the dynamic variable `policy` set to that address (`VITE_ELEVENLABS_AGENT_ID` in `.env`).
+
 ### The program
 
 Needs Rust, the Solana CLI 3.1.10 and the Anchor CLI 1.2.2 (`docs/team-setup.md`).
