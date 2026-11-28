@@ -1,0 +1,25 @@
+{
+  "type": "webhook",
+  "name": "confirm_purchase",
+  "description": "Paga una compra ya cotizada. Úsala solo después de que la persona dijo claramente que sí a esa compra, con el quote_id que devolvió propose_purchase.",
+  "response_timeout_secs": 30,
+  "pre_tool_speech": "force",
+  "tool_call_sound": "typing",
+  "api_schema": {
+    "url": "https://<DEPLOYMENT_HOST>/api/tools/confirm-purchase",
+    "method": "POST",
+    "request_headers": {
+      "x-agent-secret": { "secret_id": "<SECRET_ID_OF_AGENT_TOOL_SECRET>" }
+    },
+    "request_body_schema": {
+      "type": "object",
+      "required": ["quote_id"],
+      "properties": {
+        "quote_id": {
+          "type": "string",
+          "description": "El quote_id exacto que devolvió propose_purchase para la compra que la persona aceptó."
+        }
+      }
+    }
+  }
+}
