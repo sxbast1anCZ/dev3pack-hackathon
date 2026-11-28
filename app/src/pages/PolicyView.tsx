@@ -12,6 +12,8 @@ const EMPTY_CATALOG: Catalog = {
   productNameById: new Map(),
   pharmacyByWallet: new Map(),
   pharmacyNameById: new Map(),
+  products: [],
+  pharmacies: [],
 }
 
 type LoadState =

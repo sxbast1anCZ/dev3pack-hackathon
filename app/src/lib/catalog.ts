@@ -1,11 +1,26 @@
 import { createClient } from '@supabase/supabase-js'
 import { config } from '../config'
 
+export interface CatalogProduct {
+  id: string
+  name: string
+  activeIngredient: string
+  isBioequivalent: boolean
+}
+
+export interface CatalogPharmacy {
+  id: string
+  name: string
+  wallet: string | null
+}
+
 export interface Catalog {
   productNameByHash: Map<string, string>
   productNameById: Map<string, string>
   pharmacyByWallet: Map<string, { id: string; name: string }>
   pharmacyNameById: Map<string, string>
+  products: CatalogProduct[]
+  pharmacies: CatalogPharmacy[]
 }
 
 const DEFAULT_PHARMACY_NAMES: Array<[string, string]> = [
@@ -29,16 +44,25 @@ export async function loadCatalog(): Promise<Catalog> {
   const productNameById = new Map<string, string>()
   const pharmacyByWallet = new Map<string, { id: string; name: string }>()
   const pharmacyNameById = new Map<string, string>(DEFAULT_PHARMACY_NAMES)
+  const products: CatalogProduct[] = []
+  const pharmacies: CatalogPharmacy[] = []
 
   if (!config.supabaseUrl || !config.supabaseAnonKey) {
     console.warn('Supabase is not configured; using fallback catalog labels.')
-    return { productNameByHash, productNameById, pharmacyByWallet, pharmacyNameById }
+    return {
+      productNameByHash,
+      productNameById,
+      pharmacyByWallet,
+      pharmacyNameById,
+      products,
+      pharmacies,
+    }
   }
 
   try {
     const supabase = createClient(config.supabaseUrl, config.supabaseAnonKey)
     const [productsRes, pharmaciesRes] = await Promise.all([
-      supabase.from('products').select('id, name'),
+      supabase.from('products').select('id, name, active_ingredient, is_bioequivalent'),
       supabase.from('pharmacies').select('id, name, wallet'),
     ])
 
@@ -46,10 +70,23 @@ export async function loadCatalog(): Promise<Catalog> {
       console.warn('Failed to load products from Supabase:', productsRes.error.message)
     } else if (productsRes.data) {
       await Promise.all(
-        productsRes.data.map(async (row: { id: string; name: string }) => {
+        (
+          productsRes.data as Array<{
+            id: string
+            name: string
+            active_ingredient: string | null
+            is_bioequivalent: boolean | null
+          }>
+        ).map(async (row) => {
           productNameById.set(row.id, row.name)
           const hash = await sha256Hex(row.id)
           productNameByHash.set(hash, row.name)
+          products.push({
+            id: row.id,
+            name: row.name,
+            activeIngredient: row.active_ingredient ?? '',
+            isBioequivalent: Boolean(row.is_bioequivalent),
+          })
         }),
       )
     }
@@ -63,6 +100,7 @@ export async function loadCatalog(): Promise<Catalog> {
         wallet: string | null
       }>) {
         pharmacyNameById.set(row.id, row.name)
+        pharmacies.push({ id: row.id, name: row.name, wallet: row.wallet })
         if (row.wallet) {
           pharmacyByWallet.set(row.wallet, { id: row.id, name: row.name })
         }
@@ -72,5 +110,12 @@ export async function loadCatalog(): Promise<Catalog> {
     console.warn('Failed to load catalog from Supabase:', err)
   }
 
-  return { productNameByHash, productNameById, pharmacyByWallet, pharmacyNameById }
+  return {
+    productNameByHash,
+    productNameById,
+    pharmacyByWallet,
+    pharmacyNameById,
+    products,
+    pharmacies,
+  }
 }
