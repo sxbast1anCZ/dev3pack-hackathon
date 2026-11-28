@@ -76,7 +76,25 @@ test('classifyAnswer accepts a clear no', () => {
 })
 
 test('classifyAnswer does not take a doubt as an answer', () => {
-  for (const text of ['no sé', 'No se', 'Bueno, no sé', 'no sé cuánto era', '¿cuánto era?', 'sí, pero ¿cuánto era?', 'sí pero espera', 'bueno', '']) {
+  for (const text of [
+    'no sé',
+    'No se',
+    'Bueno, no sé',
+    'no lo sé',
+    'no sé cuánto era',
+    'mmm no estoy seguro',
+    'No estoy seguro',
+    'no estoy segura',
+    'tal vez',
+    'sí, quizás',
+    'espere un momento',
+    'no, espere',
+    '¿cuánto era?',
+    'sí, pero ¿cuánto era?',
+    'sí pero espera',
+    'bueno',
+    '',
+  ]) {
     assert.equal(classifyAnswer(text), null, text)
   }
 })

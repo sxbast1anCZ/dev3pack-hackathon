@@ -54,9 +54,26 @@ export type Answer = 'yes' | 'no' | null
 // «dale», «ya». Compared without accents.
 const YES_WORDS = new Set(['si', 'dale', 'ya', 'comprelo', 'compralo'])
 
+// Words that turn an answer into a doubt: «no estoy seguro», «sí, pero…», «tal vez», «espere».
+const DOUBT_WORDS = new Set([
+  'pero',
+  'seguro',
+  'segura',
+  'quizas',
+  'quiza',
+  'tal',
+  'talvez',
+  'espera',
+  'espere',
+  'momento',
+  'pienso',
+  'pensar',
+  'duda',
+])
+
 // Reads what the person said on the proposal screen with the same rule as the agent's prompt:
-// only a clear yes or a clear no counts. «Bueno, no sé», «¿cuánto era?» or «sí, pero…» are
-// neither, so the screen keeps the proposal while the agent asks again.
+// only a clear yes or a clear no counts. «Bueno, no sé», «no estoy seguro», «¿cuánto era?» or
+// «sí, pero…» are neither, so the screen keeps the proposal while the agent asks again.
 export function classifyAnswer(text: string): Answer {
   if (text.includes('?')) return null
 
@@ -66,9 +83,10 @@ export function classifyAnswer(text: string): Answer {
     .filter((w) => w.length > 0)
   if (words.length === 0) return null
 
-  if (words.includes('pero')) return null
-  for (let i = 0; i < words.length - 1; i++) {
-    if (words[i] === 'no' && words[i + 1] === 'se') return null
+  if (words.some((w) => DOUBT_WORDS.has(w))) return null
+  // «no sé», «no lo sé» (without accents, «se»).
+  for (let i = 1; i < words.length; i++) {
+    if (words[i] === 'se' && (words[i - 1] === 'no' || words[i - 1] === 'lo')) return null
   }
 
   if (words[0] === 'no') return 'no'
