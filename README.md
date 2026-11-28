@@ -188,6 +188,10 @@ Everything in this repository. There is no earlier code.
 
 Sebastián, Ruben, Victor and Luciano.
 
+## License
+
+MIT: see [`LICENSE`](LICENSE).
+
 ## Working on this repository
 
 Rules for people and coding agents: [`AGENTS.md`](AGENTS.md). Guide to the documents:
