@@ -16,8 +16,8 @@ if the AI is fooled or manipulated, it still cannot pay outside the policy.
 
 ## How it works
 
-The family's policy is already on devnet; the demo uses the guest policy listed below. One
-purchase goes like this:
+The family creates the policy on its own screen, `/familia`, with Phantom on devnet. A guest
+policy is ready for the demo (listed below). Then one purchase goes like this:
 
 1. The older person opens their page, `/p/<policy address>`, and talks. The voice is an ElevenLabs
    agent that speaks Spanish (Chile).
@@ -82,6 +82,9 @@ devnet with the IDL, and the names of medicines and pharmacies from Supabase
 
 The older person's page is at `/p/<policy address>`. It starts the ElevenLabs conversation with
 the dynamic variable `policy` set to that address (`VITE_ELEVENLABS_AGENT_ID` in `.env`).
+
+The family screen is at `/familia`. It connects Phantom on devnet, creates a policy, pauses it and
+closes it. The person's name is kept only in the browser (`localStorage`).
 
 ### The voice agent's tools
 
