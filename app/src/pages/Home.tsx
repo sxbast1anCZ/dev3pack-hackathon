@@ -6,7 +6,7 @@ export function Home() {
       <TopBar />
       <main className="page">
         <h1>Remedio Seguro</h1>
-        <p className="lead">Tu familia pone las reglas. Tú solo hablas.</p>
+        <p className="lead">Su familia pone las reglas. Usted solo habla</p>
       </main>
     </>
   )

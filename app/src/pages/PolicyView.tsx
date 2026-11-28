@@ -203,7 +203,7 @@ export function PolicyView({ policy }: { policy: string }) {
           <div className="card">
             <span className="label">Presupuesto</span>
             <span className="stat-value">
-              {pesos(data.periodBudget)} <small>cada {periodLabel(data.periodSeconds)}</small>
+              {pesos(data.periodBudget)} <small>por período de {periodLabel(data.periodSeconds)}</small>
             </span>
           </div>
           <div className="card">
@@ -242,7 +242,7 @@ export function PolicyView({ policy }: { policy: string }) {
             <span className="muted">El programa guarda las últimas 10</span>
           </div>
           {purchases.length === 0 ? (
-            <p className="muted">Todavía no hay compras.</p>
+            <p className="muted">Todavía no hay compras</p>
           ) : (
             <div className="table-wrap">
               <table>
