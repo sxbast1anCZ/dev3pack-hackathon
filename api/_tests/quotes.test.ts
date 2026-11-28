@@ -37,7 +37,7 @@ test('propose stores the quote with its price, read time and a 5 minute expiry',
     assert.ok(row)
     assert.equal(row.price, 2599)
     assert.equal(row.pharmacy, 'salcobrand')
-    assert.equal(row.read_at, '2026-11-28T11:50:00.000Z')
+    assert.equal(row.read_at, '2026-11-28T11:50:00.000Z') // the read time of the price row
     assert.equal(row.expires_at, '2026-11-28T12:05:00.000Z')
     assert.equal(row.used_at, null)
   }))
@@ -94,4 +94,10 @@ test('without Supabase settings, propose fails with 500 instead of keeping quote
       if (saved.url !== undefined) process.env.SUPABASE_URL = saved.url
       if (saved.key !== undefined) process.env.SUPABASE_SERVICE_ROLE_KEY = saved.key
     }
+  }))
+
+test('propose answers PRICE_UNAVAILABLE for a chain without a reading of that product', () =>
+  withSecret(async () => {
+    const res = await propose(toolRequest({ policy: POLICY, product_id: 'amlodipino-5mg-30', pharmacy: 'salcobrand' }))
+    assert.deepEqual(await res.json(), { ok: false, reason: 'PRICE_UNAVAILABLE' })
   }))

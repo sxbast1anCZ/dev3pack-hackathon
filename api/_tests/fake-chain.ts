@@ -1,6 +1,7 @@
 import anchor from '@anchor-lang/core'
 import type { PharmacyId } from '../_lib/contract.js'
 import { setPharmacyWallets } from '../_lib/pharmacies.js'
+import { withMemoryCatalog } from './fixtures.js'
 import { checkPolicy, LAMPORTS_PER_PESO, productHash, setChain, type Chain, type PayArgs, type PayResult, type PolicyView } from '../_lib/solana.js'
 
 const { web3 } = anchor
@@ -63,5 +64,6 @@ export function withFakeChain(policy: PolicyView = guestPolicy()): FakeChain {
   fake.policies.set(POLICY, policy)
   setChain(fake)
   setPharmacyWallets(async (id) => WALLETS[id])
+  withMemoryCatalog()
   return fake
 }
