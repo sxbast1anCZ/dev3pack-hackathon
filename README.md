@@ -86,6 +86,8 @@ the dynamic variable `policy` set to that address (`VITE_ELEVENLABS_AGENT_ID` in
 The family screen is at `/familia`. It connects Phantom on devnet, creates a policy, pauses it and
 closes it. The person's name is kept only in the browser (`localStorage`).
 
+Guest mode is at `/invitado` and uses `VITE_GUEST_POLICY`.
+
 ### The voice agent's tools
 
 The three tools are Vercel functions in `api/tools/`. The agent's prompt and tool definitions are
