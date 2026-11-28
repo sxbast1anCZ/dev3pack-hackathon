@@ -1,4 +1,5 @@
 import { Family } from './pages/Family'
+import { Guest } from './pages/Guest'
 import { Home } from './pages/Home'
 import { NotFound } from './pages/NotFound'
 import { OlderPerson } from './pages/OlderPerson'
@@ -15,9 +16,10 @@ export function App() {
       return <PolicyView policy={route.policy} />
     case 'person':
       return <OlderPerson policy={route.policy} />
+    case 'guest':
+      return <Guest />
     case 'family':
       return <Family />
-    case 'guest':
     case 'notFound':
       return <NotFound />
   }

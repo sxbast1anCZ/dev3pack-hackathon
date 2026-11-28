@@ -61,6 +61,8 @@ the dynamic variable `policy` set to that address (`VITE_ELEVENLABS_AGENT_ID` in
 The family screen is at `/familia`. It connects Phantom on devnet, creates a policy, pauses it and
 closes it. The person's name is kept only in the browser (`localStorage`).
 
+Guest mode is at `/invitado` and uses `VITE_GUEST_POLICY`.
+
 ### The program
 
 Needs Rust, the Solana CLI 3.1.10 and the Anchor CLI 1.2.2 (`docs/team-setup.md`).

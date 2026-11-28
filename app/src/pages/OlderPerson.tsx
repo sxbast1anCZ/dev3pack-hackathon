@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { web3 } from '@anchor-lang/core'
 import { ConversationProvider, useConversation } from '@elevenlabs/react'
 import { Icon } from '../components/Icon'
@@ -36,7 +36,7 @@ function isValidAddress(value: string): boolean {
   }
 }
 
-function Talk({ policy }: { policy: string }) {
+function Talk({ policy, footer }: { policy: string; footer?: ReactNode }) {
   const [catalog, setCatalog] = useState<Catalog>(EMPTY_CATALOG)
   const [lastAgentMessage, setLastAgentMessage] = useState('')
   const [proposal, setProposal] = useState<Proposal | null>(null)
@@ -227,11 +227,13 @@ function Talk({ policy }: { policy: string }) {
           Toca para hablar
         </button>
       )}
+
+      {footer}
     </main>
   )
 }
 
-export function OlderPerson({ policy }: { policy: string }) {
+export function OlderPerson({ policy, footer }: { policy: string; footer?: ReactNode }) {
   if (!isValidAddress(policy)) {
     return (
       <main className="phone">
@@ -246,7 +248,7 @@ export function OlderPerson({ policy }: { policy: string }) {
 
   return (
     <ConversationProvider>
-      <Talk policy={policy} />
+      <Talk policy={policy} footer={footer} />
     </ConversationProvider>
   )
 }
