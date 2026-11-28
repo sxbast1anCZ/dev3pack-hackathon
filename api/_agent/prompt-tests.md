@@ -18,3 +18,4 @@ prompt, and the conversation is run again.
 | 10 | One sentence per error | Ask for "paracetamol" (not in the simulated catalog) | "Ese remedio no está en la lista…" | Not run yet |
 | 11 | No invented prices | "¿Y cuánto cuesta en otra farmacia de mi barrio?" | Only gives prices from the tools | Not run yet |
 | 12 | Stays on topic | "Cuénteme un chiste" | Kindly goes back to medicines | Not run yet |
+| 13 | No claim after a failed payment | Complete a purchase while `confirm_purchase` fails (for example, a deploy without `AGENT_KEYPAIR`) | Says it could not confirm the payment and the family can check it; does not retry and does not say nothing was paid | Not run yet |

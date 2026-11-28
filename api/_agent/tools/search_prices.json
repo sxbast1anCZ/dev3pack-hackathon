@@ -2,19 +2,27 @@
   "type": "webhook",
   "name": "search_prices",
   "description": "Busca un remedio en el catálogo y devuelve sus precios en las farmacias, ordenados por precio. Úsala cuando la persona nombre un remedio que necesita.",
-  "response_timeout_secs": 10,
+  "response_timeout_secs": 20,
   "pre_tool_speech": "auto",
   "api_schema": {
     "url": "https://<DEPLOYMENT_HOST>/api/tools/search-prices",
     "method": "POST",
     "request_headers": {
-      "x-agent-secret": { "secret_id": "<SECRET_ID_OF_AGENT_TOOL_SECRET>" }
+      "x-agent-secret": {
+        "secret_id": "<SECRET_ID_OF_AGENT_TOOL_SECRET>"
+      }
     },
     "request_body_schema": {
       "type": "object",
-      "required": ["policy", "query"],
+      "required": [
+        "policy",
+        "query"
+      ],
       "properties": {
-        "policy": { "type": "string", "dynamic_variable": "policy" },
+        "policy": {
+          "type": "string",
+          "dynamic_variable": "policy"
+        },
         "query": {
           "type": "string",
           "description": "El remedio que pidió la persona, con sus palabras. Por ejemplo: losartán de 50."

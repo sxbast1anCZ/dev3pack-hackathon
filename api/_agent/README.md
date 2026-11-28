@@ -5,7 +5,7 @@ The ElevenLabs agent and its webhook tools, as configuration. ElevenLabs calls t
 
 | File | What it is |
 | --- | --- |
-| `agent.json` | Name, language, voice, first message, and which prompt and tools the agent uses |
+| `agent.json` | The published agent's id, and its name, language, model, voice, first message, prompt and tools |
 | `prompt.md` | The system prompt |
 | `tools/*.json` | One webhook tool each, in the shape of the ElevenLabs `tool_config` object |
 
@@ -16,6 +16,20 @@ Placeholders in the tool files:
   is stored as a workspace secret. The value itself is never written in this repository.
 
 ## Create or update the agent
+
+The agent is published as `agent_2601m8fzhxyvfhqtp07wg45hsgkr` (the web app's `VITE_ELEVENLABS_AGENT_ID`).
+Its three tools call `https://dev3pack-hackathon.vercel.app/api/tools/…` with the workspace secret
+`AGENT_TOOL_SECRET`:
+
+| Tool | ElevenLabs tool id |
+| --- | --- |
+| `search_prices` | `tool_5301m8g05xh8e9aa1p2pb62r5wzp` |
+| `propose_purchase` | `tool_8501m8g05yf4fr6t8w3jsfcdndgm` |
+| `confirm_purchase` | `tool_8301m8g05z7cergstvvj1gkw74yq` |
+
+`search_prices` and `propose_purchase` wait up to 20 seconds: a cold Vercel function that reads
+Supabase and Solana can take several seconds on its first call.
+
 
 1. Store `AGENT_TOOL_SECRET` as an ElevenLabs secret (dashboard: Agents, Secrets; or the API
    `POST /v1/convai/secrets`). Note its `secret_id`.
