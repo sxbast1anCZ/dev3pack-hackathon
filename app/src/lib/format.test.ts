@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { periodLabel, periodNow, pesos, shortAddress } from './format.ts'
+import { periodLabel, periodNow, pesos, shortAddress, shortProductName } from './format.ts'
 
 test('pesos formats Chilean pesos', () => {
   assert.equal(pesos(0), '$0')
@@ -27,4 +27,14 @@ test('periodNow returns natural phrasing for standard periods', () => {
 
 test('shortAddress keeps the first 4 and last 4 characters', () => {
   assert.equal(shortAddress('GUjY1234567890abcdefQqJJ'), 'GUjY…QqJJ')
+})
+
+test('shortProductName strips dose and lowercases first letter', () => {
+  assert.equal(shortProductName('Losartán 50 mg, 30 comprimidos'), 'losartán')
+  assert.equal(
+    shortProductName('Ácido acetilsalicílico 100 mg, 30 comprimidos'),
+    'ácido acetilsalicílico',
+  )
+  assert.equal(shortProductName('Eutirox 100 microgramos, 50 comprimidos'), 'eutirox')
+  assert.equal(shortProductName('Ibuprofeno'), 'ibuprofeno')
 })

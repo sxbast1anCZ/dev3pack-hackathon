@@ -90,3 +90,65 @@ export function parsePurchase(json: string): Purchase | null {
   if (typeof raw.reason !== 'string' || raw.reason.length === 0) return null
   return { ok: false, reason: raw.reason }
 }
+
+export interface Search {
+  productId: string
+  productName: string
+  offers: { pharmacy: string; price: number; inStock: boolean }[]
+}
+
+export function parseSearch(json: string): Search | null {
+  const raw = parseObject(json)
+  if (!raw || raw.ok !== true) return null
+
+  const product = raw.product
+  if (typeof product !== 'object' || product === null || Array.isArray(product)) return null
+  const prod = product as Record<string, unknown>
+  if (
+    typeof prod.id !== 'string' ||
+    prod.id.length === 0 ||
+    typeof prod.name !== 'string' ||
+    prod.name.length === 0
+  ) {
+    return null
+  }
+
+  if (!Array.isArray(raw.offers)) return null
+  const offers: Search['offers'] = []
+  for (const entry of raw.offers) {
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) return null
+    const o = entry as Record<string, unknown>
+    if (
+      typeof o.pharmacy !== 'string' ||
+      o.pharmacy.length === 0 ||
+      typeof o.price !== 'number' ||
+      !Number.isFinite(o.price) ||
+      typeof o.in_stock !== 'boolean'
+    ) {
+      return null
+    }
+    offers.push({ pharmacy: o.pharmacy, price: o.price, inStock: o.in_stock })
+  }
+
+  return { productId: prod.id, productName: prod.name, offers }
+}
+
+export function savingsFor(
+  search: Search | null,
+  proposal: Proposal | null,
+): { amount: number; vs: string } | null {
+  if (!search || !proposal || !proposal.ok) return null
+  if (search.productId !== proposal.productId) return null
+
+  const others = search.offers.filter((o) => o.inStock && o.pharmacy !== proposal.pharmacy)
+  if (others.length === 0) return null
+
+  let next = others[0]
+  for (const candidate of others) {
+    if (candidate.price < next.price) next = candidate
+  }
+
+  const amount = next.price - proposal.price
+  if (amount <= 0) return null
+  return { amount, vs: next.pharmacy }
+}
