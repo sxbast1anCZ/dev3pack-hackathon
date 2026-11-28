@@ -5,70 +5,54 @@ import { config } from '../config'
 export function Home() {
   return (
     <>
-      <TopBar />
+      <TopBar>
+        <span className="muted">Compras de prueba · nada se cobra</span>
+      </TopBar>
       <main className="page">
-        <div className="title-stack">
-          <h1>Remedio Seguro</h1>
-          <p className="lead">Tu familia pone las reglas. Tú solo hablas.</p>
-        </div>
-
-        <div className="grid-2">
-          <a className="big-button" href="/invitado">
-            <Icon name="mic" size={34} />
-            Probar como invitado
+        <h1 className="hero-title">
+          Habla. Nosotros cuidamos <span className="clay">el resto.</span>
+        </h1>
+        <div className="bento">
+          <a className="tile tile-main" href="/invitado">
+            <span className="tile-icon">
+              <Icon name="mic" size={38} />
+            </span>
+            <span>
+              <span className="tile-title">Probar como invitado</span>
+              <span className="tile-sub">Toca aquí y pide tu remedio con tu voz.</span>
+            </span>
           </a>
-          <a className="big-button big-button-dark" href="/familia">
-            Soy familia
+          <a className="tile tile-wide" href="/familia">
+            <span>
+              <span className="tile-title">Soy familia</span>
+              <span className="tile-sub">Cuida a alguien desde aquí</span>
+            </span>
+            <Icon name="arrow" size={26} />
           </a>
-        </div>
-
-        <p className="muted">
-          En el modo invitado puedes pedir un remedio por voz. La compra es de prueba: no se paga ni
-          se envía nada real.
-        </p>
-
-        <section className="section" aria-label="Cómo funciona">
-          <h2>Cómo funciona</h2>
-          <div className="stat-grid">
-            <article className="card">
-              <span className="step-num">1</span>
-              <h3>La familia pone las reglas</h3>
-              <p className="muted">
-                Define el tope por compra, el presupuesto por período, las farmacias y los remedios
-                permitidos.
-              </p>
-            </article>
-            <article className="card">
-              <span className="step-num">2</span>
-              <h3>La persona mayor solo habla</h3>
-              <p className="muted">
-                Pide su remedio por voz, sin contraseñas ni aplicaciones complicadas. El asistente
-                compara precios y propone una opción.
-              </p>
-            </article>
-            <article className="card">
-              <span className="step-num">3</span>
-              <h3>El programa cuida cada pago</h3>
-              <p className="muted">
-                Al confirmar con un «sí», el programa en Solana revisa cada regla antes de pagar. Si
-                algo se sale de los límites, lo rechaza.
-              </p>
-            </article>
-          </div>
-        </section>
-
-        <div className="band">
-          <p>
-            Las reglas y las últimas compras quedan en la cadena y cualquiera puede comprobarlas sin
-            confiar en nuestro servidor. Este prototipo corre en Solana devnet con compras
-            simuladas.
-          </p>
           {config.guestPolicy && (
-            <a className="ext-link" href={`/ver/${config.guestPolicy}`}>
-              Ver los límites de la cuenta de prueba <Icon name="eye" size={18} />
+            <a className="tile" href={`/ver/${config.guestPolicy}`}>
+              <span className="tile-title tile-title-sm">Ver la política de prueba</span>
+              <span className="tile-sub">Límites y compras →</span>
             </a>
           )}
+          <div className="tile tile-stat">
+            <span className="tile-number">3</span>
+            <span className="tile-sub">
+              farmacias comparadas: Cruz Verde, Ahumada y Salcobrand
+            </span>
+          </div>
         </div>
+        <ul className="facts-row">
+          <li>
+            <strong>$15.000</strong> tope por compra
+          </li>
+          <li>
+            <strong>10</strong> remedios en el catálogo
+          </li>
+          <li>
+            <strong>Cada pago</strong> revisado por un programa en Solana
+          </li>
+        </ul>
       </main>
     </>
   )
