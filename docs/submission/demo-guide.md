@@ -1,8 +1,9 @@
 # Demo guide: how the live app works, for the pitch and the video
 
 Written on 28 November 2026 (Chile) by the `program` lane (Ruben), for Sebastián and his agent.
-Use it to prepare the 3-minute video and the pitch. It describes what is **published now** at
-https://dev3pack-hackathon.vercel.app, from `main` (equal to `dev` at writing time). Everything
+Use it to prepare the 3-minute video and the pitch. It describes `dev` as of 28-11 after W6 (#39). The live site,
+https://dev3pack-hackathon.vercel.app, is built from `main`: before recording, check that `main`
+has caught up with `dev`, or W6 will not be on screen. Everything
 here was checked in the code or on devnet. Nothing is claimed that is not running.
 
 > For an agent reading this: explain it to Sebastián in Spanish, page by page, then help him
@@ -75,8 +76,8 @@ Everything on this page is read from the `Policy` account on devnet. Our server 
   hashes; names come from the catalog.
 - **History:** the last 10 purchases, kept on-chain.
 - **Proof:** a link to the policy in the Solana explorer.
-- **If W6 is merged:** an **estimated saving** card and a «Ahorro» column. The saving is estimated
-  with today's prices, because savings are not stored anywhere.
+- **Savings (W6, #39):** an **estimated saving** card and an «Ahorro» column. The saving is
+  estimated with today's prices, because savings are not stored anywhere.
 
 ### `/familia`: the family
 
@@ -87,9 +88,12 @@ Everything on this page is read from the `Policy` account on devnet. Our server 
 - **Manage:** pause, resume or close each policy. Closing returns every lamport to the family.
 - **Names:** the person's name («Rosa · mamá») is kept **only in this browser**. On-chain there are
   only rules and amounts.
-- **Layout:** the card **W6** (`docs/agent-handoff.md` lane `web`, being built on 28-11) turns this
-  page into a list of people on the left and the chosen person's details on the right, with an
-  estimated saving per person. Check whether it is merged before recording.
+- **Layout (W6, #39):** a list of the people you care for on the left («Ahorro estimado entre
+  todos» on top), and the chosen person on the right:
+  - their name, «Copiar su enlace», pause and close;
+  - 4 numbers: spent, estimated saving, funds and next renewal;
+  - recent purchases and their rules.
+  «Cuidar a otra persona» opens the creation form in the right panel.
 - **For the video:** this screen needs Phantom, so the judge usually does not use it. Show it
   briefly as the family's side.
 
