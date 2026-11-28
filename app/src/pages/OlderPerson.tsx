@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { web3 } from '@anchor-lang/core'
-import { ConversationProvider, useConversation, type ConversationStatus } from '@elevenlabs/react'
+import { ConversationProvider, useConversation } from '@elevenlabs/react'
 import { Icon } from '../components/Icon'
 import { config } from '../config'
 import { loadCatalog, type Catalog } from '../lib/catalog'
+import { CONFIRM_TIMEOUT_MS, classifyAnswer, resolveView, type ElderView } from '../lib/elderView'
 import { errorSentence } from '../lib/errors'
 import { pesos, shortProductName } from '../lib/format'
-import { normalize } from '../lib/search'
 import {
   parseProposal,
   parsePurchase,
@@ -32,25 +32,6 @@ const EMPTY_CATALOG: Catalog = {
   prices: [],
 }
 
-type ElderView = 'idle' | 'connecting' | 'listening' | 'offer' | 'buying' | 'blocked' | 'done'
-
-function resolveView(
-  status: ConversationStatus,
-  proposal: Proposal | null,
-  purchase: Purchase | null,
-  saidYes: boolean,
-): ElderView {
-  if (purchase?.ok) return 'done'
-  if (purchase && !purchase.ok) return 'blocked'
-  if (proposal && (!proposal.ok || !proposal.withinPolicy)) return 'blocked'
-  if (proposal && proposal.ok && proposal.withinPolicy) {
-    return saidYes ? 'buying' : 'offer'
-  }
-  if (status === 'connecting') return 'connecting'
-  if (status === 'connected') return 'listening'
-  return 'idle'
-}
-
 function isValidAddress(value: string): boolean {
   try {
     new web3.PublicKey(value)
@@ -66,6 +47,7 @@ function Talk({ policy, footer }: { policy: string; footer?: ReactNode }) {
   const [proposal, setProposal] = useState<Proposal | null>(null)
   const [purchase, setPurchase] = useState<Purchase | null>(null)
   const [saidYes, setSaidYes] = useState(false)
+  const [confirmFailed, setConfirmFailed] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
 
   const viewRef = useRef<ElderView>('idle')
@@ -84,10 +66,10 @@ function Talk({ policy, footer }: { policy: string; footer?: ReactNode }) {
     onMessage(props) {
       if (props.source !== 'user') return
       if (viewRef.current !== 'offer') return
-      const text = normalize(props.message).trim()
-      if (text.startsWith('si')) {
+      const answer = classifyAnswer(props.message)
+      if (answer === 'yes') {
         setSaidYes(true)
-      } else if (text.startsWith('no')) {
+      } else if (answer === 'no') {
         setProposal(null)
       }
     },
@@ -102,22 +84,48 @@ function Talk({ policy, footer }: { policy: string; footer?: ReactNode }) {
           setProposal(parseProposal(props.full_tool_result))
           setPurchase(null)
           setSaidYes(false)
+          setConfirmFailed(false)
         } else if (props.tool_name === 'confirm_purchase') {
-          setPurchase(parsePurchase(props.full_tool_result))
+          // A 500 or a timeout of the tool arrives as text that is not a purchase. Whether the
+          // payment went through is then unknown: the page says so, as the agent does.
+          const result = parsePurchase(props.full_tool_result)
+          if (result) setPurchase(result)
+          else setConfirmFailed(true)
         }
+      } else if (props.tool_name === 'confirm_purchase' && props.is_error) {
+        setConfirmFailed(true)
       }
     },
     onError(message) {
       console.error('[conversation]', message)
       setProblem('Se cortó la conversación. Toca para hablar de nuevo.')
     },
-    onDisconnect() {},
+    onDisconnect(details) {
+      // A call that ends during a purchase is handled by resolveView. The next call starts clean
+      // (handleStart), so an old offer never comes back.
+      if (details.reason === 'error') {
+        setProblem('Se cortó la conversación. Toca para hablar de nuevo.')
+      }
+    },
   })
 
-  const view = resolveView(status, proposal, purchase, saidYes)
+  const view = resolveView(status, { proposal, purchase, saidYes, confirmFailed })
   viewRef.current = view
 
+  // A yes that never reached the agent (a cut network, a lost message) gets no answer. After a
+  // while the page stops showing «Comprando…». A late answer still shows the result.
+  useEffect(() => {
+    if (view !== 'buying') return
+    const timer = window.setTimeout(() => setConfirmFailed(true), CONFIRM_TIMEOUT_MS)
+    return () => window.clearTimeout(timer)
+  }, [view])
+
   async function handleStart() {
+    setSearch(null)
+    setProposal(null)
+    setPurchase(null)
+    setSaidYes(false)
+    setConfirmFailed(false)
     setProblem(null)
 
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -150,6 +158,7 @@ function Talk({ policy, footer }: { policy: string; footer?: ReactNode }) {
     setProposal(null)
     setPurchase(null)
     setSaidYes(false)
+    setConfirmFailed(false)
     setProblem(null)
   }
 
@@ -168,6 +177,7 @@ function Talk({ policy, footer }: { policy: string; footer?: ReactNode }) {
     setProposal(null)
     setPurchase(null)
     setSaidYes(false)
+    setConfirmFailed(false)
     setProblem(null)
     if (status !== 'connected' && status !== 'connecting') {
       handleStart()
@@ -195,7 +205,11 @@ function Talk({ policy, footer }: { policy: string; footer?: ReactNode }) {
           : ''
 
   const showTopStop =
-    view === 'listening' || view === 'offer' || view === 'buying' || view === 'blocked'
+    view === 'listening' ||
+    view === 'offer' ||
+    view === 'buying' ||
+    view === 'blocked' ||
+    view === 'unconfirmed'
 
   return (
     <main className="elder">
@@ -282,6 +296,21 @@ function Talk({ policy, footer }: { policy: string; footer?: ReactNode }) {
             </span>
             <p className="elder-q">No se puede comprar.</p>
             <p className="elder-sub">{errorSentence(blockedReason)}</p>
+          </div>
+          <button type="button" className="yes yes-dark" onClick={onAnother}>
+            Pedir otro remedio
+          </button>
+        </>
+      )}
+
+      {view === 'unconfirmed' && (
+        <>
+          <div className="elder-center">
+            <span className="ring-warn">
+              <Icon name="alert" size={64} />
+            </span>
+            <p className="elder-q">No pude confirmar la compra.</p>
+            <p className="elder-sub">Tu familia puede revisar si quedó pagada.</p>
           </div>
           <button type="button" className="yes yes-dark" onClick={onAnother}>
             Pedir otro remedio
