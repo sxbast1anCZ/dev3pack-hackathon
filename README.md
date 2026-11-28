@@ -58,6 +58,9 @@ devnet with the IDL, and the names of medicines and pharmacies from Supabase
 The older person's page is at `/p/<policy address>`. It starts the ElevenLabs conversation with
 the dynamic variable `policy` set to that address (`VITE_ELEVENLABS_AGENT_ID` in `.env`).
 
+The family screen is at `/familia`. It connects Phantom on devnet, creates a policy, pauses it and
+closes it. The person's name is kept only in the browser (`localStorage`).
+
 ### The program
 
 Needs Rust, the Solana CLI 3.1.10 and the Anchor CLI 1.2.2 (`docs/team-setup.md`).
