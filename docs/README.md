@@ -27,6 +27,7 @@ What each document is for and which to read first. If two documents disagree, th
 | `decisions.md` | The decision record, newest last | Current |
 | `team-setup.md` | Tools, wallets and accounts per developer | Current |
 | `submission/checklist.md` | Milestones and the checklist for the final submission | Current |
+| `submission/demo-guide.md` | How the live app works page by page, how the pieces connect, and an outline for the 3-minute video | Current |
 | `superpowers/specs/2026-11-27-remedio-seguro-design.md` | The product design: what it is, for whom, what is in and out, and the limits we state | Current |
 | `contracts.md` | The interfaces between lanes: program accounts and instructions, agent tools, database tables | Current |
 | `agent-handoff.md` | Task cards per lane, for an agent that starts with no context | Current |
