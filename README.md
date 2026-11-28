@@ -16,7 +16,32 @@ if the AI is fooled or manipulated, it still cannot pay outside the policy.
 
 ## How it works
 
-To be written when the first flow runs: the steps, and a diagram.
+The family creates the policy on its own screen, `/familia`, with Phantom on devnet. A guest
+policy is ready for the demo (listed below). Then one purchase goes like this:
+
+1. The older person opens their page, `/p/<policy address>`, and talks. The voice is an ElevenLabs
+   agent that speaks Spanish (Chile).
+2. The person names a medicine. The agent calls `search_prices`. The server finds the medicine in
+   the catalog, even when speech recognition spells it another way ("lozartán"). It returns the
+   latest price and stock at each pharmacy, as Firecrawl read them, and how old each reading is.
+3. The agent picks the cheapest pharmacy with stock and calls `propose_purchase`. The server reads
+   the policy on devnet and checks the same rules as the program (paused, agent, pharmacy,
+   medicine, cap per purchase, budget and vault balance), then stores a quote that expires in 5
+   minutes.
+4. The agent says the medicine, the pharmacy, the price and how old the price is, and asks. Only
+   after a clear yes does it call `confirm_purchase`.
+5. The server claims the quote (a missing, expired or already used quote is refused) and signs
+   `agent_pay` with the agent's key. The program checks every rule again and moves the amount from
+   the policy's vault to the pharmacy's devnet address. The agent says the purchase is paid, and
+   the page links to the transaction.
+
+The server holds the agent's key, never the family's money: whatever the agent is told, the
+program refuses a payment outside the policy, and the server pays each quote at most once.
+
+Example, made by voice on 28 November 2026: losartán 50 mg, 30 tablets, at Cruz Verde for 1,890
+pesos.
+[Transaction on devnet](https://explorer.solana.com/tx/5h2hExaFKxz4ht5Uhdj3PLcJ2tXVuzhrAivSLESuXSrmcyfqipJsuw37oDCgb5ZSXQj9nb3pu2P8GCfuAaTdzWuA?cluster=devnet):
+1,890,000 lamports from the guest policy to the Cruz Verde address.
 
 ## Program addresses
 
@@ -60,6 +85,22 @@ the dynamic variable `policy` set to that address (`VITE_ELEVENLABS_AGENT_ID` in
 
 The family screen is at `/familia`. It connects Phantom on devnet, creates a policy, pauses it and
 closes it. The person's name is kept only in the browser (`localStorage`).
+
+### The voice agent's tools
+
+The three tools are Vercel functions in `api/tools/`. The agent's prompt and tool definitions are
+in `api/_agent/` (setup steps in [`api/_agent/README.md`](api/_agent/README.md)). To run the
+same handlers from your machine, against Supabase and devnet, without Vercel or ElevenLabs:
+
+```bash
+npm run try:search                # reads the catalog and prices only
+npm run try:purchase              # also proposes a purchase on the guest policy, pays nothing
+npm run try:purchase -- --pay     # also confirms: one real payment on devnet
+```
+
+They need `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `.env`; `try:purchase` also needs
+`AGENT_KEYPAIR` and `GUEST_POLICY`. On Vercel, the functions also need `AGENT_TOOL_SECRET`: a call
+whose `x-agent-secret` header differs gets a 401.
 
 ### The program
 
@@ -122,6 +163,9 @@ Filled in only when the integration runs. Each row names the file where it lives
 | --- | --- | --- |
 | Firecrawl | Reads the current price and stock of each catalog medicine on three pharmacy sites (Cruz Verde, Ahumada, Salcobrand) | `data/refresh-prices.mjs` |
 | Supabase | Stores the catalog and the latest reading of each price. The browser key can read them and cannot write | `data/refresh-prices.mjs` |
+| Supabase | The agent's server reads the catalog, prices and pharmacy addresses, and stores each quote. A quote is claimed in one conditional update, so it pays at most once | `api/_lib/catalog.ts`, `api/_lib/quotes.ts`, `api/_lib/pharmacies.ts` |
+| ElevenLabs | The voice agent the older person talks to, in Spanish (Chile). It calls three webhook tools on our server, `search_prices`, `propose_purchase` and `confirm_purchase`, each with a shared secret header. The page starts the conversation with the policy as a dynamic variable | `api/_agent/`, `api/tools/`, `app/src/pages/OlderPerson.tsx` |
+| Solana (agent side) | The server signs `agent_pay` with the agent's key, reads the policy before proposing, and turns each program error into a reason the voice can say | `api/_lib/solana.ts` |
 
 ## What this project does not do
 
