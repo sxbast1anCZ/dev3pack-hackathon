@@ -5,7 +5,7 @@ export function Brand() {
   return (
     <a className="brand" href="/">
       <span className="brand-mark">
-        <Icon name="pill" />
+        <Icon name="cross" filled size={18} />
       </span>
       <span className="brand-name">Remedio Seguro</span>
     </a>
