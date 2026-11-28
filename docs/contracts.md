@@ -215,6 +215,10 @@ sent, so it can never pay twice.
 - The older person's page receives the policy address in its URL and starts the ElevenLabs
   conversation with the dynamic variable `policy` set to it.
 - Guest mode uses the address in `GUEST_POLICY`.
+- While a proposal is on screen, the page may show «Sí» and «No» buttons. A tap sends the agent a
+  text message with exactly `Sí` or `No` (ElevenLabs `sendUserMessage`). The agent treats it as the
+  spoken answer: `Sí` confirms the purchase it just proposed, `No` cancels it, and a `Sí` with no
+  proposal pending pays nothing.
 - The family screen and the read-only view read the `Policy` account from the chain with the IDL.
   Explorer links for purchases come from the `signature` that `confirm_purchase` returns.
 - All text is Spanish (Chile), with no crypto words on the older person's page.

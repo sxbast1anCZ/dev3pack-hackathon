@@ -1,5 +1,7 @@
 const PATHS: Record<string, string[]> = {
   pill: ['M10.5 3.5a5 5 0 0 1 7.07 7.07l-7.07 7.07a5 5 0 0 1-7.07-7.07z', 'M7 7l7 7'],
+  cross: ['M8.5 2h7v6.5H22v7h-6.5V22h-7v-6.5H2v-7h6.5z'],
+  arrow: ['M5 12h14', 'M13 6l6 6-6 6'],
   store: ['M3 10l9-6 9 6', 'M5 10v9h14v-9', 'M10 19v-5h4v5'],
   external: ['M7 17L17 7', 'M9 7h8v8'],
   check: ['M5 12.5l4.5 4.5L19 7.5'],
@@ -22,19 +24,21 @@ export function Icon({
   name,
   size = 20,
   strokeWidth = 2.2,
+  filled = false,
 }: {
   name: IconName
   size?: number
   strokeWidth?: number
+  filled?: boolean
 }) {
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={strokeWidth}
+      fill={filled ? 'currentColor' : 'none'}
+      stroke={filled ? 'none' : 'currentColor'}
+      strokeWidth={filled ? undefined : strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"

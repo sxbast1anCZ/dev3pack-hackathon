@@ -39,3 +39,20 @@ export function shortAddress(base58: string): string {
 export function explorerAddressUrl(base58: string): string {
   return `https://explorer.solana.com/address/${base58}?cluster=devnet`
 }
+
+export function periodNow(seconds: number): string {
+  if (seconds === 3600) return 'esta hora'
+  if (seconds === 86400) return 'hoy'
+  if (seconds === 604800) return 'esta semana'
+  if (seconds === 2592000) return 'este mes'
+  return 'en este período'
+}
+
+export function shortProductName(name: string): string {
+  const trimmed = name.trim()
+  if (!trimmed) return ''
+  const digitIdx = trimmed.search(/\d/)
+  const base = (digitIdx === -1 ? trimmed : trimmed.slice(0, digitIdx)).replace(/[\s,]+$/, '')
+  if (!base) return ''
+  return base[0].toLowerCase() + base.slice(1)
+}
