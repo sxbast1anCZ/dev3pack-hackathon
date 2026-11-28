@@ -2,6 +2,11 @@
   "name": "remedio-seguro",
   "private": true,
   "type": "module",
+  "overrides": {
+    "rpc-websockets": {
+      "uuid": "^11.1.0"
+    }
+  },
   "engines": {
     "node": "22.x"
   },
