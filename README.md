@@ -4,6 +4,10 @@
 > **Status: in progress.** This README is filled in as each part works, and it never claims
 > something that is not in the code.
 
+**Live demo:** [dev3pack-hackathon.vercel.app](https://dev3pack-hackathon.vercel.app) · **Guest mode, no wallet:**
+[`/invitado`](https://dev3pack-hackathon.vercel.app/invitado) · **A purchase made by voice:** [transaction on devnet](https://explorer.solana.com/tx/5h2hExaFKxz4ht5Uhdj3PLcJ2tXVuzhrAivSLESuXSrmcyfqipJsuw37oDCgb5ZSXQj9nb3pu2P8GCfuAaTdzWuA?cluster=devnet) ·
+**Check it yourself:** [Verify it yourself](#verify-it-yourself)
+
 ## What it is
 
 A voice agent that buys medicines for an older person, inside spending limits that their family
@@ -13,6 +17,10 @@ The family creates a policy: a budget per period, a cap per purchase, the pharma
 the medicines it allows. The older person only talks. The agent compares prices in pharmacy chains,
 proposes one, and pays after a spoken yes. A Solana program checks every rule before any payment:
 if the AI is fooled or manipulated, it still cannot pay outside the policy.
+
+Why it matters: the same medicine costs different amounts in each chain, and comparing them is hard
+for an older person. In our price readings of 27 November 2026, losartán 50 mg (30 tablets) with
+stock cost 1,890 pesos at Cruz Verde and 2,287 pesos at Salcobrand: 21% more for the same box.
 
 ## How it works
 
@@ -35,6 +43,33 @@ policy is ready for the demo (listed below). Then one purchase goes like this:
    the policy's vault to the pharmacy's devnet address. The agent says the purchase is paid, and
    the page links to the transaction.
 
+```mermaid
+sequenceDiagram
+    actor P as Older person
+    participant W as Web page
+    participant V as ElevenLabs agent
+    participant A as Our server, api/tools
+    participant D as Supabase
+    participant S as Solana program, devnet
+    Note over D: Prices and stock read by Firecrawl, data/refresh-prices.mjs
+    P->>W: Taps and talks
+    W->>V: Starts the conversation with the policy address
+    V->>A: search_prices
+    A->>D: Catalog and latest prices
+    A-->>V: Offers sorted by price, with stock
+    V->>A: propose_purchase
+    A->>S: Reads the Policy account and checks its rules
+    A->>D: Stores a quote that expires in 5 minutes
+    V-->>P: Says the medicine, pharmacy and price, and asks
+    P->>V: Sí
+    V->>A: confirm_purchase
+    A->>D: Claims the quote, at most once
+    A->>S: agent_pay, signed with the agent key
+    S-->>A: Every rule passes, the lamports move from the vault to the pharmacy
+    A-->>V: Transaction signature
+    V-->>W: The page shows the purchase and the explorer link
+```
+
 The server holds the agent's key, never the family's money: whatever the agent is told, the
 program refuses a payment outside the policy, and the server pays each quote at most once.
 
@@ -52,7 +87,21 @@ pesos.
 
 ## Try it
 
-Live demo: not published yet. The app and its functions deploy to Vercel from `dev` (`vercel.json`).
+Live demo: [dev3pack-hackathon.vercel.app](https://dev3pack-hackathon.vercel.app), in Spanish (Chile). It deploys to Vercel from
+`dev` (`vercel.json`). The guest mode needs no wallet and no real money:
+
+1. Open [`/invitado`](https://dev3pack-hackathon.vercel.app/invitado), tap «Toca para hablar» and allow the microphone.
+2. Say «Necesito losartán de 50». The agent compares three pharmacy chains and proposes the cheapest
+   one with stock, with its price and how old the price reading is.
+3. Say «Sí». The agent pays from the guest policy, and the page links to the transaction on devnet.
+4. Open the guest policy's read-only view,
+   [`/ver/DsmKUXVLME1KcMyewKNuNhdcnMV9cU6w2sSdUDrPVRvB`](https://dev3pack-hackathon.vercel.app/ver/DsmKUXVLME1KcMyewKNuNhdcnMV9cU6w2sSdUDrPVRvB): the limits, the
+   amount spent and the last purchases, read from the chain.
+5. To hear a refusal, ask for a medicine that is not on the list, such as «ibuprofeno».
+
+The family screen, [`/familia`](https://dev3pack-hackathon.vercel.app/familia), needs the Phantom extension on devnet with test SOL.
+
+![The read-only view of the guest policy, read from Solana devnet](docs/images/policy-view.png)
 
 ## Run it locally
 
@@ -160,6 +209,32 @@ The spending limits are enforced by our own program, `remedio_seguro`, not by ou
 Four instructions in all: `create_policy`, `agent_pay`, `set_paused`, `close_policy`. Each
 refusal has its own test in [`program/tests/remedio_seguro.ts`](program/tests/remedio_seguro.ts).
 
+## Verify it yourself
+
+Each claim of this README can be checked without trusting us.
+
+| Claim | How to check it |
+| --- | --- |
+| Our own program runs on devnet | The [program account](https://explorer.solana.com/address/Axg5mp8n16EGYXEmXVZD4XM3YT2jjsypH2Ep5tJKwaEF?cluster=devnet) is executable. Source: `program/programs/remedio_seguro/src/lib.rs` |
+| The policy holds the money and the rules | The [guest policy account](https://explorer.solana.com/address/DsmKUXVLME1KcMyewKNuNhdcnMV9cU6w2sSdUDrPVRvB?cluster=devnet), or its [read-only view](https://dev3pack-hackathon.vercel.app/ver/DsmKUXVLME1KcMyewKNuNhdcnMV9cU6w2sSdUDrPVRvB), which decodes it with the IDL (`app/src/lib/policy.ts`) |
+| The voice agent paid through the program | The [example transaction](https://explorer.solana.com/tx/5h2hExaFKxz4ht5Uhdj3PLcJ2tXVuzhrAivSLESuXSrmcyfqipJsuw37oDCgb5ZSXQj9nb3pu2P8GCfuAaTdzWuA?cluster=devnet): instruction `AgentPay`, 1,890,000 lamports from the policy to the pharmacy |
+| Every rule has a test | `cd program && yarn test:local`: 19 tests, one per refusal. CI job `program` |
+| The server and the web app are tested | `npm test`: 92 tests in `api/_tests/` and `app/src/`. CI job `app-and-api` |
+| The agent's instructions | `api/_agent/prompt.md`, and the conversations used to try to break it in `api/_agent/prompt-tests.md` |
+| No secrets in the repository | `scripts/check-secrets.sh`, CI job `hygiene` |
+
+### Where each judging signal is
+
+| Signal named by the organizers | Where to look |
+| --- | --- |
+| Eligibility | Our own Rust program on devnet ([Program addresses](#program-addresses)), a public repository and a video under 3 minutes (link in the submission form) |
+| Product clarity | [What it is](#what-it-is) and [How it works](#how-it-works), with the diagram |
+| Real-world impact | Older people in Chile who buy their medicines, and the price gap between chains ([What it is](#what-it-is)) |
+| Demo quality | [Try it](#try-it): the guest mode completes the main flow from the live link |
+| Deployment | The live app and its functions on Vercel (`vercel.json`) |
+| Repository quality | 4 CI jobs (`.github/workflows/ci.yml`), 111 tests, the contracts between lanes (`docs/contracts.md`) and the rules for contributors (`AGENTS.md`, `CONTRIBUTING.md`) |
+| Depth of Solana and SDK use | [What Solana does here](#what-solana-does-here): a PDA vault, four instructions and an on-chain purchase history. Anchor clients sign on the server (`api/_lib/solana.ts`) and in the browser with Phantom (`app/src/lib/familyTx.ts`) |
+
 ## Integrations
 
 Filled in only when the integration runs. Each row names the file where it lives.
@@ -171,6 +246,7 @@ Filled in only when the integration runs. Each row names the file where it lives
 | Supabase | The agent's server reads the catalog, prices and pharmacy addresses, and stores each quote. A quote is claimed in one conditional update, so it pays at most once | `api/_lib/catalog.ts`, `api/_lib/quotes.ts`, `api/_lib/pharmacies.ts` |
 | ElevenLabs | The voice agent the older person talks to, in Spanish (Chile). It calls three webhook tools on our server, `search_prices`, `propose_purchase` and `confirm_purchase`, each with a shared secret header. The page starts the conversation with the policy as a dynamic variable | `api/_agent/`, `api/tools/`, `app/src/pages/OlderPerson.tsx` |
 | Solana (agent side) | The server signs `agent_pay` with the agent's key, reads the policy before proposing, and turns each program error into a reason the voice can say | `api/_lib/solana.ts` |
+| Solana (web side) | The read-only view decodes the `Policy` account from devnet with the IDL. The family screen signs `create_policy`, `set_paused` and `close_policy` with Phantom | `app/src/lib/policy.ts`, `app/src/lib/familyTx.ts`, `app/src/lib/phantom.ts` |
 
 ## What this project does not do
 
