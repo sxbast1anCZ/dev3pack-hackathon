@@ -1,0 +1,32 @@
+{
+  "name": "remedio-seguro",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite --config app/vite.config.ts",
+    "build": "vite build --config app/vite.config.ts",
+    "preview": "vite preview --config app/vite.config.ts",
+    "typecheck": "tsc -p app && tsc -p api",
+    "test": "node --import tsx --test \"api/_tests/**/*.test.ts\"",
+    "check:devnet": "tsx api/_scripts/devnet-check.ts",
+    "try:search": "node --env-file-if-exists=.env --import tsx api/_scripts/try-search.ts"
+  },
+  "dependencies": {
+    "@anchor-lang/core": "^1.2.2",
+    "@supabase/supabase-js": "^2.119.2",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.11",
+    "@types/react": "^19.3.3",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vite": "^8.4.0"
+  }
+}

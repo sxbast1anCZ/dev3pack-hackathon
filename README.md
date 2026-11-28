@@ -1,8 +1,8 @@
 # Remedio Seguro
 
 > Built for the Dev3pack Global Hackathon, 27 to 29 November 2026.
-> **Status: day one.** Nothing below is built yet. This README is filled in as each part works, and
-> it never claims something that is not in the code.
+> **Status: in progress.** This README is filled in as each part works, and it never claims
+> something that is not in the code.
 
 ## What it is
 
@@ -26,16 +26,82 @@ To be written when the first flow runs: the steps, and a diagram.
 
 ## Try it
 
-Live demo: not published yet.
+Live demo: not published yet. The app and its functions deploy to Vercel from `dev` (`vercel.json`).
 
 ## Run it locally
 
-To be written when the project is scaffolded.
+### The web app and the functions
+
+Needs Node.js 22 or later.
+
+```
+npm install
+npm run dev        # the web app, at http://localhost:5173
+npm test           # tests of the functions in api/
+npm run typecheck
+npm run build      # the app, into app/dist
+```
+
+`npm run dev` serves only the app. To run the app and the functions in `api/` together, use the
+Vercel CLI: `npx vercel dev`.
+
+| Directory | What it holds |
+| --- | --- |
+| `app/` | The web app: Vite, React and TypeScript |
+| `api/` | Vercel functions. Files and folders whose name starts with `_` are not published as functions |
+
+### The program
+
+Needs Rust, the Solana CLI 3.1.10 and the Anchor CLI 1.2.2 (`docs/team-setup.md`).
+
+```bash
+cd program
+yarn install
+yarn test:local
+```
+
+`yarn test:local` builds the program for SBPF v0 and runs the 19 tests on a local
+`solana-test-validator`. CI runs the same command on every pull request
+(`.github/workflows/ci.yml`, job `program`).
+
+To check the deployed program on devnet, with the deploy wallet as the family:
+
+```bash
+cd program
+ANCHOR_PROVIDER_URL=https://api.devnet.solana.com ANCHOR_WALLET=~/.config/solana/id.json \
+  yarn run ts-node -P ./tsconfig.json scripts/smoke-devnet.ts
+```
+
+It creates a policy, pays 2,599 pesos, is refused over the cap (`OverPurchaseCap`) and while
+paused (`Paused`), pays again after resuming, and closes the policy.
 
 ## What Solana does here
 
-To be written when the program runs. In short: the limits are enforced by the program, not by our
-server.
+The spending limits are enforced by our own program, `remedio_seguro`, not by our server. Source:
+[`program/programs/remedio_seguro/src/lib.rs`](program/programs/remedio_seguro/src/lib.rs). IDL:
+[`idl/remedio_seguro.json`](idl/remedio_seguro.json).
+
+- **The policy is the vault.** Each policy is one account (a PDA of the family's key and a seed)
+  that stores the rules and also holds the money, in devnet SOL at 1 peso = 1,000 lamports. Our
+  server never holds the family's money.
+- **Only the program can move it.** The agent's key can sign a payment, but the payment is an
+  instruction of the program, `agent_pay`, and it fails unless every rule passes. In this order:
+  the policy is not paused; the signer is the policy's agent; the pharmacy is one of the allowed
+  ones (at most 3); the medicine is one of the allowed ones (at most 10, stored as `sha256`
+  hashes); the amount is above zero and within the cap per purchase; the amount fits in the budget
+  of the current period (the period renews by itself); and the vault keeps its rent-exempt
+  minimum. Each refusal has a name, such as `OverPurchaseCap`, that the voice agent reads out.
+- **If the AI is fooled, it still cannot pay outside the policy.** A manipulated agent can only
+  ask the program to pay; the program refuses anything the family did not allow.
+- **The family keeps control.** Only the family's key can pause the policy (`set_paused`) or close
+  it and take back every lamport (`close_policy`). Anyone can top it up with a normal SOL
+  transfer.
+- **The history is on-chain.** The policy keeps its last 10 purchases: amount, pharmacy, medicine,
+  time and a hash of the quote the agent showed. The family can audit them without trusting our
+  database.
+
+Four instructions in all: `create_policy`, `agent_pay`, `set_paused`, `close_policy`. Each
+refusal has its own test in [`program/tests/remedio_seguro.ts`](program/tests/remedio_seguro.ts).
 
 ## Integrations
 

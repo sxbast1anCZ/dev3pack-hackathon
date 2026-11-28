@@ -1,0 +1,16 @@
+{
+  "name": "Remedio Seguro",
+  "language": "es",
+  "voice_id": "5Cv0Ai2PG63GLyPEHsNy",
+  "voice_name": "María - Natural and Friendly (ElevenLabs voice library, es-latin-american)",
+  "first_message": "Hola, soy tu asistente de Remedio Seguro. ¿Qué remedio necesitas?",
+  "prompt_file": "prompt.md",
+  "tools": [
+    "tools/search_prices.json",
+    "tools/propose_purchase.json",
+    "tools/confirm_purchase.json"
+  ],
+  "dynamic_variable_placeholders": {
+    "policy": "GUEST_POLICY address, set by the web page at runtime"
+  }
+}

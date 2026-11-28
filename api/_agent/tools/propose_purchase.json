@@ -1,0 +1,30 @@
+{
+  "type": "webhook",
+  "name": "propose_purchase",
+  "description": "Prepara una compra de un remedio en una farmacia y devuelve una cotización que vence en 5 minutos. Úsala después de search_prices, con el producto y la farmacia que vas a proponer. No paga nada.",
+  "response_timeout_secs": 10,
+  "pre_tool_speech": "auto",
+  "api_schema": {
+    "url": "https://<DEPLOYMENT_HOST>/api/tools/propose-purchase",
+    "method": "POST",
+    "request_headers": {
+      "x-agent-secret": { "secret_id": "<SECRET_ID_OF_AGENT_TOOL_SECRET>" }
+    },
+    "request_body_schema": {
+      "type": "object",
+      "required": ["policy", "product_id", "pharmacy"],
+      "properties": {
+        "policy": { "type": "string", "dynamic_variable": "policy" },
+        "product_id": {
+          "type": "string",
+          "description": "El campo product.id que devolvió search_prices. Por ejemplo: losartan-50mg-30."
+        },
+        "pharmacy": {
+          "type": "string",
+          "enum": ["cruzverde", "ahumada", "salcobrand"],
+          "description": "La farmacia de la oferta que vas a proponer, tal como la devolvió search_prices."
+        }
+      }
+    }
+  }
+}
