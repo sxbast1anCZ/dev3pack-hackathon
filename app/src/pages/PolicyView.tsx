@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { web3 } from '@anchor-lang/core'
+import { Icon } from '../components/Icon'
+import { TopBar } from '../components/TopBar'
 import { loadCatalog, type Catalog } from '../lib/catalog'
 import { dateTime, explorerAddressUrl, periodLabel, pesos, shortAddress } from '../lib/format'
 import { readPolicy, type PolicySummary } from '../lib/policy'
@@ -81,45 +83,63 @@ export function PolicyView({ policy }: { policy: string }) {
 
   if (!valid) {
     return (
-      <main>
-        <p className="error">Este enlace no es válido.</p>
-        <p>
-          <a href="/">Volver al inicio</a>
-        </p>
-      </main>
+      <>
+        <TopBar />
+        <main className="page">
+          <p className="error">Este enlace no es válido.</p>
+          <p>
+            <a href="/">Volver al inicio</a>
+          </p>
+        </main>
+      </>
     )
   }
 
   if (state.status === 'loading') {
     return (
-      <main>
-        <p>Cargando la política…</p>
-      </main>
+      <>
+        <TopBar />
+        <main className="page">
+          <p>Cargando la política…</p>
+        </main>
+      </>
     )
   }
 
   if (state.status === 'notFound') {
     return (
-      <main>
-        <p>No encontramos esta política. Revisa el enlace.</p>
-      </main>
+      <>
+        <TopBar />
+        <main className="page">
+          <p>No encontramos esta política. Revisa el enlace.</p>
+        </main>
+      </>
     )
   }
 
   if (state.status === 'error') {
     return (
-      <main>
-        <p className="error">No pudimos leer la política. Revisa tu conexión e inténtalo de nuevo.</p>
-        <button type="button" onClick={() => fetchPolicy(false)}>
-          Reintentar
-        </button>
-      </main>
+      <>
+        <TopBar />
+        <main className="page">
+          <p className="error">
+            No pudimos leer la política. Revisa tu conexión e inténtalo de nuevo.
+          </p>
+          <p>
+            <button type="button" className="btn" onClick={() => fetchPolicy(false)}>
+              Reintentar
+            </button>
+          </p>
+        </main>
+      </>
     )
   }
 
   const data = state.policy
   const nowSeconds = Math.floor(Date.now() / 1000)
   const period = periodState(data.periodStart, data.periodSeconds, data.spentInPeriod, nowSeconds)
+  const percent =
+    data.periodBudget > 0 ? Math.min(100, (period.spent / data.periodBudget) * 100) : 0
   const purchases = recentPurchases(data.history, data.purchaseCount)
 
   const pharmacyLabel = (address: string) =>
@@ -129,78 +149,143 @@ export function PolicyView({ policy }: { policy: string }) {
     catalog.productNameByHash.get(hash) ?? 'Medicamento fuera del catálogo'
 
   return (
-    <main>
-      <h1>Política de compras</h1>
-      <p>
-        <span className={data.paused ? 'tag tag-paused' : 'tag tag-active'}>
-          {data.paused ? 'En pausa' : 'Activa'}
+    <>
+      <TopBar>
+        <span className="pill">
+          <Icon name="eye" size={16} />
+          Vista de solo lectura · datos leídos de Solana devnet
         </span>
-      </p>
-
-      <ul>
-        <li>Tope por compra: {pesos(data.perPurchaseCap)}</li>
-        <li>
-          Presupuesto: {pesos(data.periodBudget)} cada {periodLabel(data.periodSeconds)}
-        </li>
-        <li>
-          <div>
-            Gastado en este período: {pesos(period.spent)} de {pesos(data.periodBudget)}
+      </TopBar>
+      <main className="page">
+        <div className="title-row">
+          <div className="title-stack">
+            <div className="title-line">
+              <h1>Política de compras</h1>
+              <span className={data.paused ? 'tag tag-warn' : 'tag tag-ok'}>
+                {data.paused ? 'En pausa' : 'Activa'}
+              </span>
+            </div>
+            <div className="mono">{data.address}</div>
           </div>
-          <progress value={period.spent} max={data.periodBudget} />
-        </li>
-        <li>
-          {period.ended
-            ? 'El período anterior terminó. El presupuesto completo está disponible.'
-            : `Se renueva el ${dateTime(period.renewsAt)}.`}
-        </li>
-        <li>Fondos disponibles: {pesos(data.availablePesos)}</li>
-      </ul>
+          <p className="muted">Se actualiza cada 10 segundos</p>
+        </div>
 
-      <h2>Farmacias permitidas</h2>
-      <ul>
-        {data.pharmacies.map((address) => (
-          <li key={address}>{pharmacyLabel(address)}</li>
-        ))}
-      </ul>
+        <section className="card card-lg" aria-label="Gasto del período">
+          <div className="section-head">
+            <span className="label">Gastado en este período</span>
+            <span className="muted">
+              {period.ended
+                ? 'El período anterior terminó. El presupuesto completo está disponible'
+                : `Se renueva el ${dateTime(period.renewsAt)}`}
+            </span>
+          </div>
+          <div className="title-line">
+            <span className="big-number">{pesos(period.spent)}</span>
+            <span className="of">de {pesos(data.periodBudget)}</span>
+          </div>
+          <div
+            className="bar"
+            role="progressbar"
+            aria-label="Presupuesto usado"
+            aria-valuemin={0}
+            aria-valuemax={data.periodBudget}
+            aria-valuenow={period.spent}
+          >
+            <div className="bar-fill" style={{ width: `${percent}%` }} />
+          </div>
+        </section>
 
-      <h2>Medicamentos permitidos</h2>
-      <ul>
-        {data.productHashes.map((hash) => (
-          <li key={hash}>{productLabel(hash)}</li>
-        ))}
-      </ul>
+        <div className="stat-grid">
+          <div className="card">
+            <span className="label">Tope por compra</span>
+            <span className="stat-value">{pesos(data.perPurchaseCap)}</span>
+          </div>
+          <div className="card">
+            <span className="label">Presupuesto</span>
+            <span className="stat-value">
+              {pesos(data.periodBudget)} <small>cada {periodLabel(data.periodSeconds)}</small>
+            </span>
+          </div>
+          <div className="card">
+            <span className="label">Fondos disponibles</span>
+            <span className="stat-value">{pesos(data.availablePesos)}</span>
+          </div>
+        </div>
 
-      <h2>Últimas compras</h2>
-      {purchases.length === 0 ? (
-        <p>Todavía no hay compras.</p>
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Medicamento</th>
-              <th>Farmacia</th>
-              <th>Monto</th>
-            </tr>
-          </thead>
-          <tbody>
-            {purchases.map((row, idx) => (
-              <tr key={`${row.timestamp}-${idx}`}>
-                <td>{dateTime(row.timestamp)}</td>
-                <td>{productLabel(data.allProductSlots[row.productIndex] ?? '')}</td>
-                <td>{pharmacyLabel(data.allPharmacySlots[row.pharmacyIndex] ?? '')}</td>
-                <td>{pesos(row.amount)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+        <div className="split">
+          <section className="card split-side">
+            <h2>Farmacias permitidas</h2>
+            <ul className="list">
+              {data.pharmacies.map((address) => (
+                <li key={address} className="list-row">
+                  <Icon name="store" size={18} />
+                  {pharmacyLabel(address)}
+                </li>
+              ))}
+            </ul>
+          </section>
+          <section className="card split-main">
+            <h2>
+              Medicamentos permitidos <span className="muted">· {data.productHashes.length}</span>
+            </h2>
+            <ul className="med-grid">
+              {data.productHashes.map((hash) => (
+                <li key={hash}>{productLabel(hash)}</li>
+              ))}
+            </ul>
+          </section>
+        </div>
 
-      <p>
-        <a href={explorerAddressUrl(data.address)} target="_blank" rel="noreferrer">
-          Ver la política en el explorador de Solana
-        </a>
-      </p>
-    </main>
+        <section className="card">
+          <div className="section-head">
+            <h2>Últimas compras</h2>
+            <span className="muted">El programa guarda las últimas 10</span>
+          </div>
+          {purchases.length === 0 ? (
+            <p className="muted">Todavía no hay compras.</p>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Medicamento</th>
+                    <th>Farmacia</th>
+                    <th className="num">Monto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {purchases.map((row, idx) => (
+                    <tr key={`${row.timestamp}-${idx}`}>
+                      <td className="muted">{dateTime(row.timestamp)}</td>
+                      <td>
+                        <strong>{productLabel(data.allProductSlots[row.productIndex] ?? '')}</strong>
+                      </td>
+                      <td>{pharmacyLabel(data.allPharmacySlots[row.pharmacyIndex] ?? '')}</td>
+                      <td className="num">{pesos(row.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <div className="band">
+          <p>
+            Cada regla de esta página la hace cumplir el programa en la cadena, no nuestro servidor.
+            Cualquiera puede comprobarla en el explorador.
+          </p>
+          <a
+            className="ext-link"
+            href={explorerAddressUrl(data.address)}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Ver la política en el explorador de Solana <Icon name="external" size={18} />
+          </a>
+        </div>
+      </main>
+    </>
   )
 }
