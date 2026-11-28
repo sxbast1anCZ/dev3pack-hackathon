@@ -23,6 +23,7 @@ To be written when the first flow runs: the steps, and a diagram.
 | Network | Program | Address |
 | --- | --- | --- |
 | Devnet | `remedio_seguro` | [`Axg5mp8n16EGYXEmXVZD4XM3YT2jjsypH2Ep5tJKwaEF`](https://explorer.solana.com/address/Axg5mp8n16EGYXEmXVZD4XM3YT2jjsypH2Ep5tJKwaEF?cluster=devnet) |
+| Devnet | Guest policy (guest mode) | [`DsmKUXVLME1KcMyewKNuNhdcnMV9cU6w2sSdUDrPVRvB`](https://explorer.solana.com/address/DsmKUXVLME1KcMyewKNuNhdcnMV9cU6w2sSdUDrPVRvB?cluster=devnet) |
 
 ## Try it
 
