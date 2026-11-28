@@ -23,7 +23,8 @@ export function agentTool<T>(validate: Validator<T>, handler: (body: T) => Promi
   return async (request: Request): Promise<Response> => {
     let expected: string
     try {
-      expected = requireEnv('AGENT_TOOL_SECRET')
+      // Trimmed: a secret pasted into a dashboard often carries a trailing space or newline.
+      expected = requireEnv('AGENT_TOOL_SECRET').trim()
     } catch (err) {
       if (err instanceof MissingEnvError) {
         console.error(err.message)
@@ -32,8 +33,8 @@ export function agentTool<T>(validate: Validator<T>, handler: (body: T) => Promi
       throw err
     }
 
-    const given = request.headers.get('x-agent-secret')
-    if (!given || !sameSecret(given, expected)) return json({ error: 'unauthorized' }, 401)
+    const given = request.headers.get('x-agent-secret')?.trim()
+    if (!given || !expected || !sameSecret(given, expected)) return json({ error: 'unauthorized' }, 401)
 
     let raw: unknown
     try {

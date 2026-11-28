@@ -42,3 +42,17 @@ test('a body without policy or query is a 400', () =>
       assert.equal(res.status, 400, JSON.stringify(bad))
     }
   }))
+
+test('a secret pasted with a trailing newline or space still matches', async () => {
+  const before = process.env.AGENT_TOOL_SECRET
+  process.env.AGENT_TOOL_SECRET = 'test-secret-value\n'
+  try {
+    const res = await POST(toolRequest(body, ' test-secret-value '))
+    assert.notEqual(res.status, 401)
+    const wrong = await POST(toolRequest(body, 'test-secret-valuE'))
+    assert.equal(wrong.status, 401)
+  } finally {
+    if (before === undefined) delete process.env.AGENT_TOOL_SECRET
+    else process.env.AGENT_TOOL_SECRET = before
+  }
+})
