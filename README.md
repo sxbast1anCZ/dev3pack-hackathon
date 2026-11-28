@@ -26,9 +26,29 @@ To be written when the first flow runs: the steps, and a diagram.
 
 ## Try it
 
-Live demo: not published yet.
+Live demo: not published yet. The app and its functions deploy to Vercel from `dev` (`vercel.json`).
 
 ## Run it locally
+
+### The web app and the functions
+
+Needs Node.js 22 or later.
+
+```
+npm install
+npm run dev        # the web app, at http://localhost:5173
+npm test           # tests of the functions in api/
+npm run typecheck
+npm run build      # the app, into app/dist
+```
+
+`npm run dev` serves only the app. To run the app and the functions in `api/` together, use the
+Vercel CLI: `npx vercel dev`.
+
+| Directory | What it holds |
+| --- | --- |
+| `app/` | The web app: Vite, React and TypeScript |
+| `api/` | Vercel functions. Files and folders whose name starts with `_` are not published as functions |
 
 ### The program
 
@@ -54,8 +74,6 @@ ANCHOR_PROVIDER_URL=https://api.devnet.solana.com ANCHOR_WALLET=~/.config/solana
 
 It creates a policy, pays 2,599 pesos, is refused over the cap (`OverPurchaseCap`) and while
 paused (`Paused`), pays again after resuming, and closes the policy.
-
-The rest of the project (web, agent tools) is added here when it runs.
 
 ## What Solana does here
 
