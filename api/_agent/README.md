@@ -19,7 +19,8 @@ Placeholders in the tool files:
 
 The agent is published as `agent_2601m8fzhxyvfhqtp07wg45hsgkr` (the web app's `VITE_ELEVENLABS_AGENT_ID`).
 Its three tools call `https://dev3pack-hackathon.vercel.app/api/tools/…` with the workspace secret
-`AGENT_TOOL_SECRET`:
+`AGENT_TOOL_SECRET_V3` (id `SyHk4tErp7USTlEGgMz3`), whose value equals `AGENT_TOOL_SECRET` on
+Vercel:
 
 | Tool | ElevenLabs tool id |
 | --- | --- |
@@ -32,7 +33,11 @@ Supabase and Solana can take several seconds on its first call.
 
 
 1. Store `AGENT_TOOL_SECRET` as an ElevenLabs secret (dashboard: Agents, Secrets; or the API
-   `POST /v1/convai/secrets`). Note its `secret_id`.
+   `POST /v1/convai/secrets`). Note its `secret_id`. Copy only the value: no quotes, no name, and no
+   line break at the end. A value pasted with a line break made every tool call fail in a few
+   milliseconds with "Failed to make the request"; a different value gets a 401. The dashboard
+   cannot edit a stored value, so to change it, store a new secret and point the three tools at
+   its id.
 2. Create each tool from its file, with the placeholders filled in (dashboard: Agents, Tools; or
    `POST /v1/convai/tools` with `{ "tool_config": <file> }`).
 3. Create the agent with the values of `agent.json` and the text of `prompt.md`, and attach the
@@ -44,4 +49,6 @@ Supabase and Solana can take several seconds on its first call.
 
 - The agent answers in Spanish and calls `search_prices` when asked for a medicine.
 - A call without the secret is refused: `api/_tests/agent-tool.test.ts` covers it in code.
-- How many credits one minute of conversation costs. Write it in the pull request.
+- How many credits one minute of conversation costs. Measured on 28 November 2026: a 42-second
+  conversation that bought one medicine (search, proposal, spoken yes, payment) cost 410 credits,
+  about 590 credits per minute, on the Creator plan.
