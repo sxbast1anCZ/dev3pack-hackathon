@@ -100,4 +100,15 @@ jobs:
       - name: Check the price parsers and rules
         run: node data/refresh-prices.mjs --self-test
 
-# Build and test jobs for the other lanes (agent, web) are added when each is scaffolded.
+  app-and-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
