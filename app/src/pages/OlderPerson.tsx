@@ -19,6 +19,7 @@ import {
 
 const EMPTY_CATALOG: Catalog = {
   productNameByHash: new Map(),
+  productIdByHash: new Map(),
   productNameById: new Map(),
   pharmacyByWallet: new Map(),
   pharmacyNameById: new Map([
@@ -28,6 +29,7 @@ const EMPTY_CATALOG: Catalog = {
   ]),
   products: [],
   pharmacies: [],
+  prices: [],
 }
 
 type ElderView = 'idle' | 'connecting' | 'listening' | 'offer' | 'buying' | 'blocked' | 'done'
