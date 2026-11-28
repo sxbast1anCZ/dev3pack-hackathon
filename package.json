@@ -10,7 +10,7 @@
     "build": "vite build --config app/vite.config.ts",
     "preview": "vite preview --config app/vite.config.ts",
     "typecheck": "tsc -p app && tsc -p api",
-    "test": "node --import tsx --test \"api/_tests/**/*.test.ts\"",
+    "test": "node --import tsx --test \"api/_tests/**/*.test.ts\" \"app/src/**/*.test.ts\"",
     "check:devnet": "tsx api/_scripts/devnet-check.ts",
     "try:search": "node --env-file-if-exists=.env --import tsx api/_scripts/try-search.ts"
   },
