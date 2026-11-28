@@ -1,9 +1,12 @@
 {
+  "agent_id": "agent_2601m8fzhxyvfhqtp07wg45hsgkr",
   "name": "Remedio Seguro",
   "language": "es",
+  "llm": "claude-sonnet-5-5",
+  "timezone": "America/Santiago",
   "voice_id": "5Cv0Ai2PG63GLyPEHsNy",
   "voice_name": "María - Natural and Friendly (ElevenLabs voice library, es-latin-american)",
-  "first_message": "Hola, soy tu asistente de Remedio Seguro. ¿Qué remedio necesitas?",
+  "first_message": "Hola, soy el asistente de Remedio Seguro. ¿Qué remedio necesita?",
   "prompt_file": "prompt.md",
   "tools": [
     "tools/search_prices.json",
@@ -11,6 +14,6 @@
     "tools/confirm_purchase.json"
   ],
   "dynamic_variable_placeholders": {
-    "policy": "GUEST_POLICY address, set by the web page at runtime"
+    "policy": "DsmKUXVLME1KcMyewKNuNhdcnMV9cU6w2sSdUDrPVRvB"
   }
 }
