@@ -66,15 +66,23 @@ export function normalize(text: string): string {
   return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
 }
 
-// The product whose alias appears in what the person said. When several match, the longest alias
-// wins: "corodin de 50" names Corodin even if it also contains a shorter alias of another product.
+// How a request is compared with an alias: normalized, "z" read as "s" (they sound the same in
+// Chile), and without spaces. Speech recognition joins and splits words: "mi losartán" arrives as
+// "milosartán", "losartán" as "lozartán".
+function spoken(text: string): string {
+  return normalize(text).replace(/z/g, 's').replace(/ /g, '')
+}
+
+// The product whose alias appears in what the person said, even inside a longer word. When several
+// match, the longest alias wins: "corodin de 50" names Corodin even if it also contains a shorter
+// alias of another product.
 export function matchProduct(query: string, products: ProductRow[]): ProductRow | undefined {
-  const q = ` ${normalize(query)} `
+  const q = spoken(query)
   let best: { product: ProductRow; length: number } | undefined
   for (const product of products) {
     for (const alias of product.aliases) {
-      const a = normalize(alias)
-      if (a && q.includes(` ${a} `) && (!best || a.length > best.length)) best = { product, length: a.length }
+      const a = spoken(alias)
+      if (a.length >= 4 && q.includes(a) && (!best || a.length > best.length)) best = { product, length: a.length }
     }
   }
   return best?.product
